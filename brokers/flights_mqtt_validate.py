@@ -12,24 +12,22 @@ def send_data(data):
 def on_connect(client, userdata, flags, reason_code, properties):
     print(f"Connected with result code {reason_code}")
  
-    client.subscribe("flights/info")
+    client.subscribe("flights/validation")
 
 def on_message(client, userdata, msg):
     jsonString = msg.payload.decode()
 
     data = json.loads(jsonString)
-    data = data[0]
-    data['flights'] = json.loads(data['flights'])
-    data['carbonEmission'] = json.loads(data['carbonEmission'])
 
+    ## HAY QUE DESCOMENTAR ESTA LINEA PARA CONECTAR CON API
     # send_data(data)
+    ######################################################
 
     print(data)
-    print(type(data['flights']))
-    print(type(data['price']))
-    print(type(data['carbonEmission']))
-    print(type(data['airlineLogo']))
-    print(type(data['currency']))
+    print(type(data['request_id']))
+    print(type(data['group_id']))
+    print(type(data['seller']))
+    print(type(data['valid']))
     print("\n")
 
 
