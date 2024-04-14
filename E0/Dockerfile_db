@@ -1,0 +1,11 @@
+# Usar la imagen oficial de PostgreSQL
+FROM postgres:latest
+
+# Establecer variables de entorno para la base de datos
+ENV POSTGRES_DB='flights'
+ENV POSTGRES_USER='postgres'
+ENV POSTGRES_PASSWORD='postgres'
+
+# Copiar archivos de inicialización a la carpeta de entrada
+COPY init.sql /docker-entrypoint-initdb.d/
+
