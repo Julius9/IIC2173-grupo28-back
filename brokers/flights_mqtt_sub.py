@@ -4,7 +4,7 @@ import requests
 
 
 def send_data(data):
-    url = "http://app:3000/msg"
+    url = 'http://api:3000/flights'
     response = requests.post(url, json=data)
     print('Response:', response.text)
 
@@ -15,14 +15,19 @@ def on_connect(client, userdata, flags, reason_code, properties):
     client.subscribe("flights/info")
 
 def on_message(client, userdata, msg):
+
+    #Enviar el mensaje a la API de js en json
+
     jsonString = msg.payload.decode()
 
     data = json.loads(jsonString)
     data = data[0]
-    data['flights'] = json.loads(data['flights'])
-    data['carbonEmission'] = json.loads(data['carbonEmission'])
 
-    # send_data(data)
+    # data['flights'] = json.loads(data['flights'])
+    # data['carbonEmission'] = json.loads(data['carbonEmission'])
+
+    send_data(data)
+    
 
     print(data)
     print(type(data['flights']))
