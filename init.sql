@@ -13,5 +13,6 @@ CREATE TABLE flights (
     carbon_emissions NUMERIC,
     price NUMERIC,
     currency VARCHAR(10),
-    airlinelogo VARCHAR(255)
+    airlinelogo VARCHAR(255),
+    tickets_left INT DEFAULT 90
 );

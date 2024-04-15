@@ -1,5 +1,6 @@
 import paho.mqtt.client as mqtt
 from time import sleep
+import sys
 
 # Crear un cliente MQTT
 mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -17,3 +18,10 @@ def publish(json_data):
     # Detener el loop y desconectar
     mqttc.loop_stop()
     mqttc.disconnect()
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit(1)
+
+    json_data = sys.argv[1]
+    publish(json_data)

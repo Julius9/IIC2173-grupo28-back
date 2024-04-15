@@ -4,7 +4,7 @@ import requests
 
 
 def send_data(data):
-    url = "http://app:3000/msg"
+    url = "http://api:3000/flights"
     response = requests.post(url, json=data)
     print('Response:', response.text)
 
@@ -19,9 +19,8 @@ def on_message(client, userdata, msg):
 
     data = json.loads(jsonString)
 
-    ## HAY QUE DESCOMENTAR ESTA LINEA PARA CONECTAR CON API
-    # send_data(data)
-    ######################################################
+    send_data(data)
+
 
     print(data)
     print(type(data['request_id']))
