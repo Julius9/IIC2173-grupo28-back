@@ -1,23 +1,6 @@
 version: '3'
 
 services:
-  mqtt-client:
-    build:
-      context: .
-      dockerfile: Dockerfile_mqtt
-    networks:
-      - app-network
-
-  database:
-    image: postgres:latest
-    build: 
-      context: .
-      dockerfile: Dockerfile_db
-    ports:
-      - "5432:5432"
-    networks:
-      - app-network
-
   api:
     build:
       context: .
@@ -35,7 +18,27 @@ services:
       - DB_PASSWORD=postgres
       - DB_NAME=flights
 
+      
+  database:
+    image: postgres:latest
+    build: 
+      context: .
+      dockerfile: Dockerfile_db
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+
+
+  mqtt-client:
+    build:
+      context: .
+      dockerfile: Dockerfile_mqtt
+    networks:
+      - app-network
+    depends_on:
+      - api
+
 networks:
   app-network:
     driver: bridge
-
