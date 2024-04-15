@@ -1,0 +1,59 @@
+name: Lint Workflow
+
+on:
+    pull_request:
+        branches:
+            - main
+            - dev
+
+
+
+jobs:
+    lint-python:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          pip install flake8
+      - name: Lint Python code
+        run: |
+          flake8 ./brokers
+    
+    lint-javascript-api:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Install dependencies
+        run: |
+          npm install
+      - name: Lint API code
+        run: |
+          npm run lint -- ./legit_app
+
+    lint-javascript-auth:
+      runs-on: ubuntu-latest
+      steps:
+      - uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Install dependencies
+        run: |
+          npm install
+      - name: Lint Auth code
+        run: |
+          npm run lint -- ./path_to_auth_folder
+    
+
+
+    
