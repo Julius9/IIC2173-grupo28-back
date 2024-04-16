@@ -1,7 +1,5 @@
-// src/models/userModel.js
-
 const { Model, DataTypes } = require('sequelize');
-const sequelize = require('../config/database'); // Asegúrate de tener una configuración adecuada para tu conexión a la BD
+const sequelize = require('../config/config'); // Asegúrate de que la ruta sea correcta
 
 class User extends Model {}
 
@@ -32,7 +30,10 @@ User.init({
 }, {
   sequelize,
   modelName: 'User',
-  // Aquí puedes agregar opciones adicionales para el modelo
+  tableName: 'Users', // Asegúrate de que coincida exactamente con el nombre de la tabla en la migración
+  timestamps: true, // Habilita las columnas createdAt y updatedAt
+  freezeTableName: true, // Evita que Sequelize pluralice el nombre de la tabla
 });
 
 module.exports = User;
+
