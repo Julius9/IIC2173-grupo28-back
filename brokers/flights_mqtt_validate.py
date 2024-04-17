@@ -19,7 +19,7 @@ def on_message(client, userdata, msg):
 
     data = json.loads(jsonString)
 
-    send_data(data)
+    # send_data(data)
 
 
     print(data)

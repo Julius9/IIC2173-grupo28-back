@@ -6,11 +6,14 @@ WORKDIR /app
 
 # Copiar los archivos de la aplicación al contenedor
 COPY brokers ./brokers
+COPY brokers/start.sh ./brokers
 
-# Cambiar al directorio mqtt
+# Cambiar al directorio brokers
 WORKDIR /app/brokers
-# Instalar paho-mqtt
+
+# Instalar paho-mqtt y requests
 RUN pip install paho-mqtt requests
 
-# Comando para ejecutar el script del cliente MQTT
-CMD ["python", "flights_mqtt_sub.py"]
+# Hacer el script ejecutable y configurarlo como punto de entrada
+RUN chmod +x start.sh
+CMD ["./start.sh"]

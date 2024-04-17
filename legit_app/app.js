@@ -3,6 +3,12 @@ const bodyParser = require('body-parser');
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
+// Poner el path del archivo flights_mqtt_request_validation.js esta en la carpeta brokers , aqui abajo
+const mqtt = require('./flights_mqtt_request_validation');
+const { v4: uuidv4 } = require('uuid');
+
+
+
 // const { v4: uuidv4 } = require('uuid');
 // const { exec } = require('child_process');
 
@@ -63,10 +69,10 @@ async function findFlightById(flightId) {
     }
 }
 
-// async function updateFlightTickets(flightId, updatedTicketsLeft) {
-//     const query = 'UPDATE flights SET tickets_left = $1 WHERE id = $2';
-//     await dbClient.query(query, [updatedTicketsLeft, flightId]);
-// }
+async function updateFlightTickets(flightId, updatedTicketsLeft) {
+    const query = 'UPDATE flights SET tickets_left = $1 WHERE id = $2';
+    await dbClient.query(query, [updatedTicketsLeft, flightId]);
+}
 
 // function publishToMQTT(data, callback) {
 //     const pythonCommand = `python3 flights_mqtt_request.py '${JSON.stringify(data)}'`;
@@ -212,60 +218,68 @@ app.get('/flights/:id', async (req, res) => {
 });
 
 // Endpoint para reservar tickets de un vuelo específico
-// app.post('/flights/:id/reservar', async (req, res) => {
-//     const flightId = req.params.id;
-//     const ticketsToBook = req.body.ticketsToBook;  // La cantidad de tickets a descontar
+app.post('/flights/:id/reservar', async (req, res) => {
+    const flightId = req.params.id;
+    const ticketsToBook = req.body.ticketsToBook;  // La cantidad de tickets a descontar
 
-//     try {
-//         // Buscar el vuelo actual en la base de datos
-//         const flight = await findFlightById(flightId);
-//         if (!flight) {
-//             throw new Error("Vuelo no encontrado");
-//         }
+    try {
+        // Buscar el vuelo actual en la base de datos
+        const flight = await findFlightById(flightId);
+        if (!flight) {
+            throw new Error("Vuelo no encontrado");
+        }
 
-//         // Verificar si hay suficientes tickets disponibles
-//         if (flight.tickets_left < ticketsToBook) {
-//             throw new Error("No hay suficientes tickets disponibles para reservar, seleccione una cantidad menor");
-//         }
+        // Verificar si hay suficientes tickets disponibles
+        if (flight.tickets_left < ticketsToBook) {
+            throw new Error("No hay suficientes tickets disponibles para reservar, seleccione una cantidad menor");
+        }
 
-//         // Actualizar la cantidad de tickets disponibles
-//         const updatedTicketsLeft = flight.tickets_left - ticketsToBook;
-//         await updateFlightTickets(flightId, updatedTicketsLeft);
+        // Actualizar la cantidad de tickets disponibles
+        const updatedTicketsLeft = flight.tickets_left - ticketsToBook;
+        await updateFlightTickets(flightId, updatedTicketsLeft);
         
-//         // Enviar request al canal flights/request para verificar el vuelo
+        // Enviar request al canal flights/request para verificar el vuelo
 
-//         // Crear el id y todo aqui y llamar al otro servicio
-//         // Crear un uuid
-//         const requestResponse = {
-//             request_id: uuidv4(),
-//             group_id: groupId,
-//             departure_airport: flight.departure_airport_id,
-//             arrival_airport: flight.arrival_airport_id,
-//             departure_time: flight.departure_airport_time.toISOString(),
-//             datetime: new Date().toISOString(),
-//             deposit_token: "",  // Asigna un token si es necesario
-//             quantity: ticketsToBook,
-//             seller: 0
-//         };
-        
-//         publishToMQTT(message, async (err, result) => {
-//             if (err) {
-//                 return res.status(500).json({ error: "Failed to publish message to MQTT broker" });
-//             }
-//         });
+        // Crear el id y todo aqui y llamar al otro servicio
+        // Crear un uuid
+        const requestResponse = {
+            "request_id": uuidv4().toString(),
+            "group_id": "28",
+            "departure_airport": flight.departure_airport_id,
+            "arrival_airport": flight.arrival_airport_id,
+            "departure_time": flight.departure_airport_time.toISOString(),
+            "datetime": new Date().toISOString(),
+            "deposit_token": "",  // Asigna un token si es necesario
+            "quantity": ticketsToBook,
+            "seller": 0
+        };
+
+        const request_id = mqtt.publishRequest(requestResponse);
+        console.log('Request ID:', request_id);
+
+        mqtt.onValidationReceived = (validation) => {
+            if (validation.request_id === request_id && validation.group_id === 28) {
+                console.log('Validation received:', validation);
+                if (validation.valid) {
+                    console.log('Validation approved');
+                    res.json({ success: true, message: `Successfully booked ${ticketsToBook} tickets` });
+                } else {
+                    // Devolver los tickets reservados
+                    updateFlightTickets(flightId, flight.tickets_left + ticketsToBook);
+                    console.log('Validation denied');
+                }
+            }
+        }
 
 
 
+        // Enviar la confirmación de que los tickets fueron reservados
 
-//         // Enviar la confirmación de que los tickets fueron reservados
-
-//         res.json({ success: true, message: `Successfully booked ${ticketsToBook} tickets` });
-
-//         //
-//     } catch (error) {
-//         res.status(400).json({ error: error.message });
-//     }
-// });
+        //
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
 
 // Iniciar el servidor
 app.listen(port, () => {
