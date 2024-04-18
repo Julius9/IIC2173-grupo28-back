@@ -1,7 +1,9 @@
+import datetime
 import paho.mqtt.client as mqtt
 from time import sleep
 import sys
 import json
+import pytz
 
 # Crear un cliente MQTT
 mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -17,18 +19,26 @@ def publish():
 
     # Publicar el mensaje
     # Prueba de mensaje
+    #datetime tiene que estar en este formato: <YYYY-MM-DD hh:mm (en horario chileno)>
 
+    chile_zone = pytz.timezone('Chile/Continental')
+
+# Obtener la fecha y hora actual en la zona horaria de Chile
+    chile_time = datetime.datetime.now(chile_zone)
+
+    # Formatear la fecha y hora en formato ISO 8601
+    formatted_time = chile_time.strftime('%Y-%m-%dT%H:%M:%S%z')
     json_data = {
-            "request_id": "0b56dfcb-8ae6-40a3-a3d5-d41503894a60",
-             "group_id": "28",
-             "departure_airport": "JFK",
-             "arrival_airport": "LHR",
-             "departure_time": "2024-04-24T19:40:00.000Z",
-             "datetime": "2024-04-17T01:28:17.315Z",
-             "deposit_token": "",
-             "quantity": 2,
-             "seller": 0
-             }
+        "request_id":"68c9663b-eee3-44fe-83b6-6bf10a41c559",
+        "group_id":"28",
+        "departure_airport":"DEN",
+        "arrival_airport":"LHR",
+        "departure_time":"2024-04-24 20:20",
+        "datetime": formatted_time,
+        "deposit_token":"",
+        "quantity":2,
+        "seller":0}
+    print(json_data)
     json_data = json.dumps(json_data)
     print(json_data)
     mqttc.publish("flights/requests", json_data)

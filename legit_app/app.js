@@ -74,6 +74,17 @@ async function updateFlightTickets(flightId, updatedTicketsLeft) {
     await dbClient.query(query, [updatedTicketsLeft, flightId]);
 }
 
+async function formatearFechaVuelo(date) {
+    const year = date.getUTCFullYear(); // Año
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0'); // Mes, +1 porque getMonth devuelve 0-11
+    const day = date.getUTCDate().toString().padStart(2, '0'); // Día
+    const hours = date.getUTCHours().toString().padStart(2, '0'); // Hora
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0'); // Minutos
+
+    // Combinar los componentes en el formato deseado
+    const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}`;
+    return formattedTime;
+}
 // function publishToMQTT(data, callback) {
 //     const pythonCommand = `python3 flights_mqtt_request.py '${JSON.stringify(data)}'`;
 //     exec(pythonCommand, (error, stdout, stderr) => {
@@ -247,7 +258,7 @@ app.post('/flights/:id/reservar', async (req, res) => {
             "group_id": "28",
             "departure_airport": flight.departure_airport_id,
             "arrival_airport": flight.arrival_airport_id,
-            "departure_time": flight.departure_airport_time.toISOString(),
+            "departure_time": await formatearFechaVuelo(flight.departure_airport_time),
             "datetime": new Date().toISOString(),
             "deposit_token": "",  // Asigna un token si es necesario
             "quantity": ticketsToBook,
