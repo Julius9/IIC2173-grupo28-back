@@ -8,10 +8,6 @@ const mqtt = require('./flights_mqtt_request_validation');
 const { v4: uuidv4 } = require('uuid');
 
 
-
-// const { v4: uuidv4 } = require('uuid');
-// const { exec } = require('child_process');
-
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -85,20 +81,6 @@ async function formatearFechaVuelo(date) {
     const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}`;
     return formattedTime;
 }
-// function publishToMQTT(data, callback) {
-//     const pythonCommand = `python3 flights_mqtt_request.py '${JSON.stringify(data)}'`;
-//     exec(pythonCommand, (error, stdout, stderr) => {
-//         if (error) {
-//             console.error(`Error executing Python script: ${error}`);
-//             return callback(error, null);
-//         }
-//         if (stderr) {
-//             console.error(`Python script stderr: ${stderr}`);
-//         }
-//         console.log(`Python script stdout: ${stdout}`);
-//         callback(null, stdout);
-//     });
-// }
 
 // Endpoint para recibir nuevos vuelos
 app.post('/flights', async (req, res) => {
