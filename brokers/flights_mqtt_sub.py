@@ -11,12 +11,11 @@ def send_data(data):
 
 def on_connect(client, userdata, flags, reason_code, properties):
     print(f"Connected with result code {reason_code}")
- 
     client.subscribe("flights/info")
+
 
 def on_message(client, userdata, msg):
     jsonString = msg.payload.decode()
-
     data = json.loads(jsonString)
     data = data[0]
     data['flights'] = json.loads(data['flights'])
@@ -36,9 +35,6 @@ def on_message(client, userdata, msg):
 mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqttc.on_connect = on_connect
 mqttc.on_message = on_message
-
 mqttc.username_pw_set("students", "iic2173-2024-1-students")
-
 mqttc.connect("broker.iic2173.org", 9000, 60)
-
 mqttc.loop_forever()

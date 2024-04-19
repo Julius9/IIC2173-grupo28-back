@@ -11,6 +11,7 @@ mqttc.connect("broker.iic2173.org", 9000, 60)
 # Iniciar el loop
 mqttc.loop_start()
 
+
 def publish(json_data):
     mqttc.publish("flights/requests", json_data)
     sleep(2)  # Ajusta este tiempo si es necesario
