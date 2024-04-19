@@ -1,6 +1,6 @@
 // src/middleware/errorHandler.js
 
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res) => {
     // Podrías agregar lógica para diferenciar los tipos de errores
     const statusCode = err.statusCode || 500;
     const message = err.message || "Internal Server Error";
