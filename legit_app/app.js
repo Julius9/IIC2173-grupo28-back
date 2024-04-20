@@ -6,6 +6,9 @@ const path = require('path');
 // Poner el path del archivo flights_mqtt_request_validation.js esta en la carpeta brokers , aqui abajo
 const mqtt = require('./flights_mqtt_request_validation');
 const { v4: uuidv4 } = require('uuid');
+const { IPinfoWrapper } = require("node-ipinfo");
+
+
 
 
 const app = express();
@@ -19,6 +22,8 @@ const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 let lastUpdate = null;
 
+const ipinfo = new IPinfoWrapper(config.IPINFO_TOKEN);
+
 // Configuración de la conexión a la base de datos
 const dbClient = new Client({
     user: config.DB_USER,
@@ -27,6 +32,10 @@ const dbClient = new Client({
     password: config.DB_PASSWORD,
     port: config.DB_PORT,
 });
+
+// Conectar a la base de datos de usuarios
+// const dbClientUsers = new Client({
+
 
 // Conectar a la base de datos al iniciar la aplicación
 dbClient.connect()
@@ -62,6 +71,26 @@ async function findFlightById(flightId) {
         }
     } catch (error) {
         throw new Error('Error al buscar el vuelo en la base de datos: ' + error.message);
+    }
+}
+
+async function getCityFromIP(ipAddress) {
+    try {
+        // Obtener la información de la IP usando ipinfo
+        const response = await ipinfo.lookupIp(ipAddress);
+
+        // Verificar si se recibió una respuesta válida
+        if (response && response.city && response.country) {
+            // Devolver la ciudad obtenida de la respuesta
+            return `${response.city}, ${response.country}`;
+        } else {
+            // Si no se recibió una respuesta válida o no hay información de ciudad, lanzar un error
+            throw new Error('No se pudo obtener la ciudad para la dirección IP proporcionada');
+        }
+    } catch (error) {
+        // Capturar cualquier error que ocurra durante la obtención de la información de la IP
+        console.error('Error al obtener la ciudad de la IP:', error);
+        throw new Error('Error al obtener la ciudad para la dirección IP proporcionada');
     }
 }
 
@@ -232,12 +261,50 @@ app.get('/flights/:id', async (req, res) => {
     }
 });
 
+app.get('/compras', async (req, res) => {
+    try{
+        // Obtener el id de usuario de la solicitud
+
+        id = 1;  // ID de usuario temporal, cambiar por el id del usuario autenticado
+        //
+
+        // Consultar la base de datos para obtener las compras del usuario
+        const query = 'SELECT * FROM purchases WHERE user_id = $1';
+        const result = await dbClient.query(query);
+
+        // Enviar la respuesta al cliente con las compras del usuario
+
+        res.json(result.rows);
+
+    } catch (error) {
+        res.status(404).json({ error: error.message });
+    
+    };
+
+});
+
+
 // Endpoint para reservar tickets de un vuelo específico
 app.post('/flights/:id/reservar', async (req, res) => {
     const flightId = req.params.id;
     const ticketsToBook = req.body.ticketsToBook;  // La cantidad de tickets a descontar
 
     try {
+
+        const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        let clientCity;
+        if (!clientIp) {
+            // throw new Error('No se pudo obtener la dirección IP del cliente.');
+            clientCity = 'Desconocido';
+        } else {
+            try {
+                // Se guarda la ciudad del cliente
+                clientCity = await getCityFromIP(clientIp);
+            } catch (error) {
+                clientCity = 'Desconocido';
+            }
+        }
+
         // Buscar el vuelo actual en la base de datos
         const flight = await findFlightById(flightId);
         if (!flight) {
@@ -277,6 +344,16 @@ app.post('/flights/:id/reservar', async (req, res) => {
                 console.log('Validation received:', validation);
                 if (validation.valid) {
                     console.log('Validation approved');
+                    // Guardar la compra en la base de datos
+
+                    // Obtener el id de usuario de la solicitud
+                    const userId = 1;  // ID de usuario temporal, cambiar por el id del usuario autenticado
+
+                    // Insertar la compra en la base de datos
+                    const query = 'INSERT INTO purchases (flight_id, user_id, quantity, total_price, purchase_date, location) VALUES ($1, $2, $3, $4, $5, $6)';
+                    const values = [flightId, userId, ticketsToBook, flight.price * ticketsToBook, new Date(), clientCity];
+                    dbClient.query(query, values);
+
                     res.json({ success: true, message: `Successfully booked ${ticketsToBook} tickets` });
                 } else {
                     // Devolver los tickets reservados

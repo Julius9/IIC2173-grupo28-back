@@ -16,3 +16,14 @@ CREATE TABLE flights (
     airlinelogo VARCHAR(255),
     tickets_left INT DEFAULT 90
 );
+
+CREATE TABLE purchases (
+    id SERIAL PRIMARY KEY,
+    flight_id INT,
+    user_id INT,
+    quantity INT,
+    total_price NUMERIC,
+    purchase_date TIMESTAMP,
+    location VARCHAR(255),
+    FOREIGN KEY (flight_id) REFERENCES flights(id)
+);
