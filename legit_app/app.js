@@ -139,6 +139,7 @@ app.post('/flights', async (req, res) => {
 // Endpoint para obtener la lista de vuelos filtrados y paginados
 app.get('/flights', async (req, res) => {
     try {
+        console.log('Obteniendo lista de vuelos filtrada y paginada...');
         // Obtener los parámetros de consulta
         const departure = req.query.departure;
         const arrival = req.query.arrival;
@@ -155,11 +156,32 @@ app.get('/flights', async (req, res) => {
 
         // Parámetros para la consulta SQL
         const queryParams = [];
+        console.log('queryParams:');
+        console.log('departure:', departure);
+        console.log('arrival:', arrival);
+        console.log('date:', date);
+
 
         // Agregar filtros si se proporcionan en la URL
         if (departure && arrival && date) {
-            query += ' WHERE departure_airport_name = $1 AND arrival_airport_name = $2 AND departure_airport_time > $3';
+            console.log('Filtrar por destino, salida y fecha');
+            query += ' WHERE departure_airport_id = $1 AND arrival_airport_id = $2 AND departure_airport_time::date = $3';
             queryParams.push(departure, arrival, date);
+        }
+        else if (departure && date) {
+            console.log('Filtrar por salida y fecha');
+            query += ' WHERE departure_airport_id = $1 AND departure_airport_time::date = $2';
+            queryParams.push(departure, date);
+        }
+        else if (departure) {
+            console.log('Filtrar por salida');
+            query += ' WHERE departure_airport_id = $1';
+            queryParams.push(departure);
+        }
+        else if (date) {
+            console.log('Filtrar por fecha');
+            query += ' WHERE departure_airport_time::date = $1';
+            queryParams.push(date);
         }
 
         // Agregar paginación a la consulta SQL
@@ -265,14 +287,99 @@ app.post('/flights/:id/reservar', async (req, res) => {
         }
 
 
-
-        // Enviar la confirmación de que los tickets fueron reservados
-
-        //
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
 });
+
+// Filtrar los vuelos por fecha de destino y fecha de salida
+
+// app.get('/flights' , async (req, res) => {
+//     try{
+//         const departure = req.query.departure;
+//         const date = req.query.date;
+//         const page = parseInt(req.query.page) || 1; // Página por defecto: 1
+//         const count = parseInt(req.query.count) || 25; // Cantidad por página por defecto: 25
+
+//         // Solo filtrar por destino
+
+//         if (departure && !date) {
+//             console.log('Solo filtrar por destino');
+//             const startIndex = (page - 1) * count;
+//             const endIndex = page * count;
+
+//             const query = 'SELECT * FROM flights WHERE departure_airport_name = $1 ORDER BY id LIMIT $2 OFFSET $3';
+//             const values = [departure, count, startIndex];
+//             const result = await dbClient.query(query, values);
+
+//             const flights = result.rows;
+//             const totalPages = Math.ceil(flights.length / count);
+
+//             const response = {
+//                 currentPage: page,
+//                 totalPages: totalPages,
+//                 totalCount: flights.length,
+//                 flights: flights,
+//                 lastUpdate: lastUpdate
+//             };
+
+//             res.json(response);
+//         } else if (!departure && date) {
+//             // Solo filtrar por fecha de salida
+//             console.log('Solo filtrar por fecha de salida');
+//             const startIndex = (page - 1) * count;
+//             const endIndex = page * count;
+
+//             const query = 'SELECT * FROM flights WHERE departure_airport_time::date = $1 ORDER BY id LIMIT $2 OFFSET $3';
+//             const values = [date, count, startIndex];
+//             const result = await dbClient.query(query, values);
+
+//             const flights = result.rows;
+//             const totalPages = Math.ceil(flights.length / count);
+
+//             const response = {
+//                 currentPage: page,
+//                 totalPages: totalPages,
+//                 totalCount: flights.length,
+//                 flights: flights,
+//                 lastUpdate: lastUpdate
+//             };
+
+//             res.json(response);
+//         } else if (departure && date) {
+//             // Filtrar por destino y fecha de salida
+//             console.log('Filtrar por destino y fecha de salida');
+//             const startIndex = (page - 1) * count;
+//             const endIndex = page * count;
+
+//             const query = 'SELECT * FROM flights WHERE departure_airport_name = $1 AND departure_airport_time::date = $2 ORDER BY id LIMIT $3 OFFSET $4';
+//             const values = [departure, date, count, startIndex];
+//             const result = await dbClient.query(query, values);
+
+//             const flights = result.rows;
+//             const totalPages = Math.ceil(flights.length / count);
+
+//             const response = {
+//                 currentPage: page,
+//                 totalPages: totalPages,
+//                 totalCount: flights.length,
+//                 flights: flights,
+//                 lastUpdate: lastUpdate
+//             };
+
+//             res.json(response);
+//         } else {
+//             // No se proporcionaron parámetros de consulta
+//             console.log('No se proporcionaron parámetros de consulta');
+//             res.status(400).json({ error: 'No se proporcionaron parámetros de consulta' });
+//         }
+
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+
+// });
+
 
 // Iniciar el servidor
 app.listen(port, () => {
