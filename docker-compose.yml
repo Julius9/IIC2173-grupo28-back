@@ -18,6 +18,7 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=flights
+      - JWT_SECRET=bfoODfWAhswIHuahRB4M1OQCdlJJODSaxnSiauttdmmYc_7FKXBysJLVwKph9LeLEvxAcayilGmOIYCo7-BoJg
 
   auth:
     build:
@@ -35,6 +36,7 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=flights
+      - JWT_SECRET=bfoODfWAhswIHuahRB4M1OQCdlJJODSaxnSiauttdmmYc_7FKXBysJLVwKph9LeLEvxAcayilGmOIYCo7-BoJg
     
   database:
     image: postgres:latest

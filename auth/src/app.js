@@ -21,7 +21,7 @@ app.use('/api/auth', authRoutes);
 app.use(errorHandler);
 
 // Definir el puerto del servidor
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3003;
 
 // Iniciar el servidor
 app.listen(PORT, () => {
