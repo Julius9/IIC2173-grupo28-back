@@ -273,7 +273,7 @@ app.get('/compras', authenticateToken, async (req, res) => {
         //
 
         // Consultar la base de datos para obtener las compras del usuario
-        const query = 'SELECT * FROM purchases WHERE user_id = $1';
+        const query = 'SELECT * FROM purchases INNER JOIN flights ON purchases.flight_id = flights.id WHERE user_id = $1';
         const values = [id];
         const result = await dbClient.query(query, values);
 
@@ -353,11 +353,12 @@ app.post('/flights/:id/reservar', authenticateToken, async (req, res) => {
                     // Guardar la compra en la base de datos
 
                     // Obtener el id de usuario de la solicitud
-                    const userId = 1;  // ID de usuario temporal, cambiar por el id del usuario autenticado
+                    let user_id = req.user.id;
+
 
                     // Insertar la compra en la base de datos
                     const query = 'INSERT INTO purchases (flight_id, user_id, quantity, total_price, purchase_date, location) VALUES ($1, $2, $3, $4, $5, $6)';
-                    const values = [flightId, userId, ticketsToBook, flight.price * ticketsToBook, new Date(), clientCity];
+                    const values = [flightId, user_id, ticketsToBook, flight.price * ticketsToBook, new Date(), clientCity];
                     dbClient.query(query, values);
 
                     res.json({ success: true, message: `Successfully booked ${ticketsToBook} tickets` });
