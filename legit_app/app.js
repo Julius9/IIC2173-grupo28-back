@@ -131,6 +131,7 @@ app.post('/flights', async (req, res) => {
             flights = JSON.parse(flightsString);
             carbonEmission = JSON.parse(carbonEmissionString);
         } catch (error) {
+            console.log('Error al analizar los datos de vuelo o emisión de carbono:', error);
             return res.status(400).json({ error: 'Datos de vuelo o emisión de carbono inválidos' });
         }
 
@@ -179,7 +180,7 @@ app.get('/flights', async (req, res) => {
 
         // Calcular el índice de inicio y el límite
         const startIndex = (page - 1) * count;
-        const endIndex = page * count;
+        
 
         // Construir la consulta SQL base
         let query = 'SELECT * FROM flights';
@@ -267,7 +268,7 @@ app.get('/compras', authenticateToken, async (req, res) => {
         // Obtener el id de usuario de la solicitud
         let user = req.user;
         console.log(user);
-
+        let id;
         id = 1;  // ID de usuario temporal, cambiar por el id del usuario autenticado
         //
 
@@ -306,6 +307,7 @@ app.post('/flights/:id/reservar', async (req, res) => {
                 clientCity = await getCityFromIP(clientIp);
             } catch (error) {
                 clientCity = 'Desconocido';
+                console.log('Error al obtener la ciudad del cliente:', error);
             }
         }
 

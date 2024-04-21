@@ -1,7 +1,4 @@
-const { json } = require('express');
 const mqtt = require('mqtt');
-const { v4: uuidv4 } = require('uuid');
-const { exec } = require('child_process');
 
 // Configuración y conexión con el broker MQTT
 const client = mqtt.connect('mqtt://broker.iic2173.org:9000', {
