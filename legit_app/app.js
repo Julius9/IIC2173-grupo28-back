@@ -267,9 +267,9 @@ app.get('/compras', authenticateToken, async (req, res) => {
     try{
         // Obtener el id de usuario de la solicitud
         let user = req.user;
-        console.log(user);
+        console.log(user.id);
         let id;
-        id = 1;  // ID de usuario temporal, cambiar por el id del usuario autenticado
+        id = user.id;  // ID de usuario temporal, cambiar por el id del usuario autenticado
         //
 
         // Consultar la base de datos para obtener las compras del usuario
@@ -290,7 +290,7 @@ app.get('/compras', authenticateToken, async (req, res) => {
 
 
 // Endpoint para reservar tickets de un vuelo específico
-app.post('/flights/:id/reservar', async (req, res) => {
+app.post('/flights/:id/reservar', authenticateToken, async (req, res) => {
     const flightId = req.params.id;
     const ticketsToBook = req.body.ticketsToBook;  // La cantidad de tickets a descontar
 
