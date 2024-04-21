@@ -320,6 +320,8 @@ app.post('/flights/:id/reservar', authenticateToken, async (req, res) => {
         // Verificar si hay suficientes tickets disponibles
         if (flight.tickets_left < ticketsToBook) {
             throw new Error("No hay suficientes tickets disponibles para reservar, seleccione una cantidad menor");
+        } else if (ticketsToBook <= 0) {
+            throw new Error("La cantidad de tickets a reservar debe ser mayor que cero");
         }
 
         // Actualizar la cantidad de tickets disponibles
