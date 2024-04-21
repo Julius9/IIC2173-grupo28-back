@@ -16,7 +16,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
 
 def on_message(client, userdata, msg):
 
-    #Enviar el mensaje a la API de js en json
+    # Enviar el mensaje a la API de js en json
 
     jsonString = msg.payload.decode()
 
@@ -27,8 +27,6 @@ def on_message(client, userdata, msg):
     # data['carbonEmission'] = json.loads(data['carbonEmission'])
 
     send_data(data)
-    
-
     print(data)
     print(type(data['flights']))
     print(type(data['price']))
@@ -41,9 +39,6 @@ def on_message(client, userdata, msg):
 mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqttc.on_connect = on_connect
 mqttc.on_message = on_message
-
 mqttc.username_pw_set("students", "iic2173-2024-1-students")
-
 mqttc.connect("broker.iic2173.org", 9000, 60)
-
 mqttc.loop_forever()
