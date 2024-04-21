@@ -51,7 +51,6 @@ jobs:
       run: |
         cd legit_app
         sudo npm install
-        chmod -R +x ./node_modules/.bin
         sudo npm run lint
 
   lint-javascript-auth:
