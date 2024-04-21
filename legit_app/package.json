@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
     "mqtt": "^5.5.2",
     "node-ipinfo": "^3.5.1",
     "pg": "^8.11.4",

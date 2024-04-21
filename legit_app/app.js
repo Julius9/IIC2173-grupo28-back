@@ -7,6 +7,7 @@ const path = require('path');
 const mqtt = require('./flights_mqtt_request_validation');
 const { v4: uuidv4 } = require('uuid');
 const { IPinfoWrapper } = require("node-ipinfo");
+const authenticateToken = require('./authenticateToken');
 
 
 
@@ -53,7 +54,7 @@ app.use(bodyParser.json());
 // Función para buscar el vuelo por ID
 async function findFlightById(flightId) {
     try {
-
+        
         // Consulta SQL para buscar el vuelo por ID
         const query = 'SELECT * FROM flights WHERE id = $1';
         const values = [flightId];
@@ -261,16 +262,19 @@ app.get('/flights/:id', async (req, res) => {
     }
 });
 
-app.get('/compras', async (req, res) => {
+app.get('/compras', authenticateToken, async (req, res) => {
     try{
         // Obtener el id de usuario de la solicitud
+        let user = req.user;
+        console.log(user);
 
         id = 1;  // ID de usuario temporal, cambiar por el id del usuario autenticado
         //
 
         // Consultar la base de datos para obtener las compras del usuario
         const query = 'SELECT * FROM purchases WHERE user_id = $1';
-        const result = await dbClient.query(query);
+        const values = [id];
+        const result = await dbClient.query(query, values);
 
         // Enviar la respuesta al cliente con las compras del usuario
 
