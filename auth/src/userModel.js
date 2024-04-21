@@ -30,7 +30,7 @@ User.init({
 }, {
   sequelize,
   modelName: 'User',
-  tableName: 'Users', // Asegúrate de que coincida exactamente con el nombre de la tabla en la migración
+  tableName: 'users', // Asegúrate de que coincida exactamente con el nombre de la tabla en la migración
   timestamps: true, // Habilita las columnas createdAt y updatedAt
   freezeTableName: true, // Evita que Sequelize pluralice el nombre de la tabla
 });

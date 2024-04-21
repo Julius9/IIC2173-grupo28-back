@@ -1,0 +1,21 @@
+FROM node:16-alpine
+
+# Create app directory
+WORKDIR /app
+
+# Copy the files that declares the dependencies (in this case using yarn)
+COPY auth/ .
+
+# Install the dependencies
+RUN npm install
+
+# Copy all the files into the container to run the app
+# COPY . .
+# Run command to start the process runing a shell command using node
+# RUN chmod +x start.sh
+# ENTRYPOINT [ "./start.sh" ]
+
+# This is for documentation only, the port muyst be exposed manually or in compose definition.
+EXPOSE 3003
+
+CMD ["npm", "start"]

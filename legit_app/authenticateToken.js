@@ -15,6 +15,7 @@ const authenticateToken = (req, res, next) => {
     }
 
     req.user = user; // Guarda los datos del usuario en el objeto de solicitud
+    console.log(req.user)
     next(); // Continúa con el próximo middleware o controlador
   });
 };
