@@ -45,10 +45,6 @@ jobs:
         else
           echo "##[set-output name=exists;]false"
         fi
-        
-    - name: Adjust Permissions
-      if: steps.check-legit-app.outputs.exists == 'true'
-      run: chmod -R +x ./node_modules/.bin
 
     - name: Install dependencies and run linter
       if: steps.check-legit-app.outputs.exists == 'true'
