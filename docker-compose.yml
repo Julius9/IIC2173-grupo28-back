@@ -1,0 +1,69 @@
+version: '3'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile_api
+    ports:
+      - "3000:3000" 
+    networks:
+      - app-network
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=flights
+      - JWT_SECRET=bfoODfWAhswIHuahRB4M1OQCdlJJODSaxnSiauttdmmYc_7FKXBysJLVwKph9LeLEvxAcayilGmOIYCo7-BoJg
+
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile_auth
+    ports:
+      - "3003:3003"
+    networks:
+      - app-network
+    depends_on:
+      - api
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=flights
+      - JWT_SECRET=bfoODfWAhswIHuahRB4M1OQCdlJJODSaxnSiauttdmmYc_7FKXBysJLVwKph9LeLEvxAcayilGmOIYCo7-BoJg
+    
+  database:
+    image: postgres:latest
+    build: 
+      context: .
+      dockerfile: Dockerfile_db
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+  mqtt-client:
+    build:
+      context: .
+      dockerfile: Dockerfile_mqtt
+    networks:
+      - app-network
+    depends_on:
+      - api
+
+networks:
+  app-network:
+    driver: bridge
