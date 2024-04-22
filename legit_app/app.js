@@ -9,6 +9,22 @@ const { v4: uuidv4 } = require('uuid');
 const { IPinfoWrapper } = require("node-ipinfo");
 const authenticateToken = require('./authenticateToken');
 
+var cors = require('cors');
+
+// Configuración de la aplicación
+
+// enable cors:
+const corsOptions = {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Headers', 'Origin','Accept', 'X-Requested-With', 'Content-Type', 'Access-Control-Request-Method', 'Access-Control-Request-Headers', 'Auth'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
 
 
 
