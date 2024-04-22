@@ -24,11 +24,11 @@ const corsOptions = {
     optionsSuccessStatus: 204
 };
 
-app.use(cors(corsOptions));
 
 
 
 const app = express();
+app.use(cors(corsOptions));
 const port = process.env.PORT || 3000;
 
 // Ruta al archivo de configuración
