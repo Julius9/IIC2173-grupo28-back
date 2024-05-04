@@ -1,15 +1,17 @@
 import Router from 'koa-router';
 import { trxRouter } from '@routes/transaction';
-import { db } from '@utils/db';
+import Flight from '@models/Flight';
 
 const router = new Router();
 
 router.use('/transaction', trxRouter.routes());
 
 router.get('/', async (ctx) => {
-  const tickets = await db.ticket.findMany();
+  console.log("Estoy en la ruta de vuelos");
+  const flights = await Flight.findAll();
+  console.log("Volví de la base de datos");
   ctx.body = {
-    tickets
+    flights
   };
 });
 

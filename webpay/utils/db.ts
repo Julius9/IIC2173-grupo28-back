@@ -1,19 +1,27 @@
-import { PrismaClient } from "@prisma/client";
+import { Pool } from 'pg';
+import dotenv from 'dotenv';
 
-let db: PrismaClient;
+// Carga las variables de entorno
+dotenv.config();
 
-declare global {
-  var __db__: PrismaClient | undefined;
-}
+// Configuración de la conexión a la base de datos usando un pool de conexiones
+const dbConnectionPool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: parseInt(process.env.DB_PORT || '5432'), // Puerto por defecto de PostgreSQL
+});
 
-if (process.env.NODE_ENV === "production") {
-  db = new PrismaClient();
-} else {
-  if (!global.__db__) {
-    global.__db__ = new PrismaClient();
-  }
-  db = global.__db__;
-  db.$connect();
-}
+console.log('DB_USER:', process.env.DB_USER);
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_NAME:', process.env.DB_NAME);
+console.log('DB_PASSWORD:', process.env.DB_PASSWORD);
+console.log('DB_PORT:', process.env.DB_PORT);
 
-export { db };
+// dbConnectionPool.on('connect', () => {
+//   console.log('Connected to the PostgreSQL database!');
+// });
+
+// Exporta solo el pool de conexiones
+export { dbConnectionPool as db };

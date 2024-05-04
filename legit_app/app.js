@@ -350,15 +350,15 @@ app.post('/flights/:id/reservar', authenticateToken, async (req, res) => {
         // Crear un uuid
 
         // Crear la logica del token
-        const webpayTokenURL = "http://localhost:3010/transaction/create";
-        const webpayToken = await fetch(webpayTokenURL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Auth': 'Bearer ' + req.token
-            },
-            body: JSON.stringify({ amount: flight.price, ticketsToBook })
-        });
+        // const webpayTokenURL = "http://localhost:3010/transaction/create";
+        // const webpayToken = await fetch(webpayTokenURL, {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Auth': 'Bearer ' + req.token
+        //     },
+        //     body: JSON.stringify({ amount: flight.price, ticketsToBook })
+        // });
 
         // Creamos la transaccion:
         // ----

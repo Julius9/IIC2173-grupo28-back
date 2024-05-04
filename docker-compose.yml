@@ -1,4 +1,3 @@
-version: '3'
 
 services:
   api:
@@ -20,19 +19,6 @@ services:
       - DB_NAME=flights
       - JWT_SECRET=bfoODfWAhswIHuahRB4M1OQCdlJJODSaxnSiauttdmmYc_7FKXBysJLVwKph9LeLEvxAcayilGmOIYCo7-BoJg
     
-    webpay:
-      build:
-        context: .
-        dockerfile: Dockerfile_webpay
-      ports:
-        - "3010:3010"
-      networks:
-        - app-network
-      depends_on:
-        - api
-      environment:
-        - DATABASE_URL=file:./dev.db
-
   auth:
     build:
       context: .

@@ -35,3 +35,15 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     money DECIMAL(10, 2) NOT NULL DEFAULT 5000.00
 );
+
+CREATE TABLE transaction (
+    id SERIAL PRIMARY KEY,
+    token VARCHAR(255) UNIQUE,
+    user_id INT,
+    amount NUMERIC NOT NULL,
+    quantity INT NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    flight_id INT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (flight_id) REFERENCES flights(id)
+);
