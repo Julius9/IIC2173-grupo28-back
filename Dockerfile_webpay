@@ -10,6 +10,7 @@ COPY webpay/ .
 
 # Instalar las dependencias
 RUN npm install
+RUN npm install -g bun
 RUN bun install
 
 # Exponer el puerto en el que tu API escucha

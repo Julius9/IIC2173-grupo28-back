@@ -3,6 +3,7 @@ import { tx } from '@utils/trx';
 // import { db } from '@utils/db';
 import Flight from '../models/Flight';
 import Transaction from '../models/Transaction';
+import { where } from 'sequelize';
 
 
 
@@ -11,6 +12,10 @@ const trxRouter = new Router();
 trxRouter.post('/create', async (ctx) => {
   try {
     const { flight_id, quantity, user_id } = ctx.request.body;
+    console.log(ctx.request.body);
+    console.log(flight_id, quantity, user_id)
+
+
     const flight = await Flight.findByPk(flight_id);
 
     if (!flight) {
@@ -27,7 +32,10 @@ trxRouter.post('/create', async (ctx) => {
       quantity: quantity,
       amount: amount,
       status: "pending"
-    });    
+    });
+
+    console.log(newTrx);
+    
     // // USO: tx.create(transactionId, nombreComercio, monto, urlRetorno)
     const trx = await tx.create(newTrx.id, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:3000");
     await Transaction.update({
