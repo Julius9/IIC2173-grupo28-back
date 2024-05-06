@@ -17,7 +17,7 @@ Transaction.init({
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'users', // Nombre del modelo referenciado como está definido en Sequelize
+            model: 'User', // Nombre del modelo referenciado como está definido en Sequelize
             key: 'id'
         }
     },
@@ -37,13 +37,13 @@ Transaction.init({
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'flights', // Nombre del modelo referenciado como está definido en Sequelize
+            model: 'Flight', // Nombre del modelo referenciado como está definido en Sequelize
             key: 'id'
         }
     }
 }, {
     sequelize,
-    modelName: 'transaction', // Nombre del modelo
+    modelName: 'Transaction', // Nombre del modelo
     tableName: 'transaction', // Nombre de la tabla en la base de datos
     timestamps: false, // Asumiendo que no quieres columnas de timestamp automáticas (createdAt y updatedAt)
     freezeTableName: true, // Evita que Sequelize pluralice el nombre de la tabla

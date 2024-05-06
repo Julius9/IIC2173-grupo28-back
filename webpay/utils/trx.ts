@@ -5,6 +5,8 @@ import Transaction from 'transbank-sdk/dist/es5/transbank/webpay/webpay_plus/tra
 
 let tx: Transaction ;
 
+console.log("Estoy en trx.ts");
+
 declare global {
   var __tx__: Transaction | undefined;
 }

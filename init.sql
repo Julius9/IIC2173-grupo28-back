@@ -47,3 +47,5 @@ CREATE TABLE transaction (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (flight_id) REFERENCES flights(id)
 );
+
+CREATE UNIQUE INDEX "Transaction_token_key" ON "transaction"("token");
