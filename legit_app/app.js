@@ -323,7 +323,7 @@ app.post('/transaction/create', async (req, res) => {
         const transactionID = newTrx.id.toString();
         const amount = quantity * Number(newTrx.amount);
         // // USO: tx.create(transactionId, nombreComercio, monto, urlRetorno)
-        const trx = await tx.create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:3000/compra-completada");
+        const trx = await tx.create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:5173/compra-completada");
         
         await updateTransactionToken(newTrx.id, trx.token);
 
