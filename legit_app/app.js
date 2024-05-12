@@ -8,6 +8,7 @@ const mqtt = require('./flights_mqtt_request_validation');
 const { v4: uuidv4 } = require('uuid');
 const { IPinfoWrapper } = require("node-ipinfo");
 const authenticateToken = require('./authenticateToken');
+const tx = require('./utils/trx');
 
 var cors = require('cors');
 
@@ -29,6 +30,7 @@ const corsOptions = {
 
 const app = express();
 app.use(cors(corsOptions));
+app.use(express.json());
 const port = process.env.PORT || 3000;
 
 // Ruta al archivo de configuración
@@ -126,6 +128,32 @@ async function formatearFechaVuelo(date) {
     // Combinar los componentes en el formato deseado
     const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}`;
     return formattedTime;
+}
+
+async function createTransaction(flight_id, quantity, user_id) {
+    const flight = await findFlightById(flight_id);
+    if (!flight) {
+        throw new Error("Vuelo no encontrado");
+    }
+    const amount = flight.price * Number(quantity);
+    
+    const query = 'INSERT INTO transaction (flight_id, user_id, quantity, amount, status) VALUES ($1, $2, $3, $4, $5) RETURNING *';
+    const values = [flight_id, user_id, quantity, amount, 'pending'];
+    const newTrx = await dbClient.query(query, values);
+    const result = newTrx.rows[0];
+    return result;
+}
+
+async function updateTransactionStatus(status, token) {
+    const query = 'UPDATE transaction SET status = $1 WHERE token = $2';
+    const values = [status, token];
+    await dbClient.query(query, values);
+}
+
+async function updateTransactionToken(transaction_id, token) {
+    const query = 'UPDATE transaction SET token = $1 WHERE id = $2';
+    const values = [token, transaction_id];
+    await dbClient.query(query, values);
 }
 
 // Endpoint para recibir nuevos vuelos
@@ -279,30 +307,66 @@ app.get('/flights/:id', async (req, res) => {
     }
 });
 
-app.get('/compras', authenticateToken, async (req, res) => {
-    try{
-        // Obtener el id de usuario de la solicitud
-        let user = req.user;
-        console.log(user.id);
-        let id;
-        id = user.id;  // ID de usuario temporal, cambiar por el id del usuario autenticado
-        //
-
-        // Consultar la base de datos para obtener las compras del usuario
-        const query = 'SELECT * FROM purchases INNER JOIN flights ON purchases.flight_id = flights.id WHERE user_id = $1';
-        const values = [id];
-        const result = await dbClient.query(query, values);
-
-        // Enviar la respuesta al cliente con las compras del usuario
-
-        res.json(result.rows);
-
-    } catch (error) {
-        res.status(404).json({ error: error.message });
+app.post('/transaction/create', async (req, res) => {
+    try {
+        const { flight_id, quantity, user_id } = req.body;
+        console.log(req.body);
+        console.log("Se recibio una solicitud de transaccion");
+        console.log(flight_id, quantity, user_id)
     
-    };
+        const newTrx = await createTransaction(flight_id, quantity, user_id);
+    
+        console.log("Se creo una nueva transaccion");
+        // hacer transaccionID a string
 
+        console.log(newTrx);
+        const transactionID = newTrx.id.toString();
+        const amount = quantity * Number(newTrx.amount);
+        // // USO: tx.create(transactionId, nombreComercio, monto, urlRetorno)
+        const trx = await tx.create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:3000/compra-completada");
+        
+        await updateTransactionToken(newTrx.id, trx.token);
+
+        // res
+        res.status(200).json(trx);
+    } catch (e) {
+    console.log(e);
+    }
+    return;
 });
+
+app.post('/transaction/commit', authenticateToken, async (req, res) => {
+    const { ws_token } = req.body;
+    if (!ws_token || ws_token == "") {
+      res.status(200).json({
+        message: "Transaccion anulada por el usuario"
+      });
+      return;
+    }
+    const confirmedTx = await tx.commit(ws_token);
+  
+    if (confirmedTx.response_code != 0) { // Rechaza la compra
+      await updateTransactionStatus('rejected', ws_token);
+      res.status(200).json( {
+        message: "Transaccion ha sido rechazada",
+        flight: trx.flight_id,
+        quantity: trx.quantity
+  
+      });
+      return;
+    }
+    
+    await updateTransactionStatus('completed', ws_token);
+
+    res.status(200).json ({
+      message: "Transaccion ha sido aceptada",
+      flight: trx.flight_id,
+      quantity: trx.quantity
+    });
+    return;
+});
+
+
 
 
 // Endpoint para reservar tickets de un vuelo específico

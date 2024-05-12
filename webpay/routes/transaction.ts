@@ -41,7 +41,7 @@ trxRouter.post('/create', async (ctx) => {
     console.log("Se creo una nueva transaccion");
     const transactionID = newTrx.id.toString();
     // // USO: tx.create(transactionId, nombreComercio, monto, urlRetorno)
-    const trx = await tx.create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:3000/flights");
+    const trx = await tx.create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:3000/compra-completada");
     await Transaction.update({
       token: trx.token
     }, {
