@@ -28,6 +28,7 @@ trxRouter.post('/create', async (ctx) => {
     const amount = flight.price * Number(quantity);
 
     console.log("Creando una transaccion");
+    console.log(flight_id, quantity, user_id, amount);
 
     const newTrx = await Transaction.create({
       flight_id: flight_id,
@@ -38,9 +39,9 @@ trxRouter.post('/create', async (ctx) => {
     });
 
     console.log("Se creo una nueva transaccion");
-    
+    const transactionID = newTrx.id.toString();
     // // USO: tx.create(transactionId, nombreComercio, monto, urlRetorno)
-    const trx = await tx.create(newTrx.id, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:3000/flights");
+    const trx = await tx.create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:3000/flights");
     await Transaction.update({
       token: trx.token
     }, {
