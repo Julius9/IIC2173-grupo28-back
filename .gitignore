@@ -1,3 +1,5 @@
 #Ignorar nodemodules de legit_app
-
+node_modules/
 legit_app/node_modules
+
+
