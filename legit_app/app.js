@@ -4,7 +4,8 @@ const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
 // Poner el path del archivo flights_mqtt_request_validation.js esta en la carpeta brokers , aqui abajo
-const mqtt = require('./flights_mqtt_request_validation');
+const mqtt_request = require('./flights_mqtt_request');
+const mqtt_validation = require('./flights_mqtt_validation');
 const { v4: uuidv4 } = require('uuid');
 const { IPinfoWrapper } = require("node-ipinfo");
 const authenticateToken = require('./authenticateToken');
@@ -90,6 +91,21 @@ async function findFlightById(flightId) {
         }
     } catch (error) {
         throw new Error('Error al buscar el vuelo en la base de datos: ' + error.message);
+    }
+}
+
+async function findTransactionByToken(token) {
+    try {
+        const query = 'SELECT * FROM transaction WHERE token = $1';
+        const values = [token];
+        const result = await dbClient.query(query, values);
+        if (result.rows.length > 0) {
+            return result.rows[0];
+        } else {
+            throw new Error('No se encontró la transacción con el token proporcionado');
+        }
+    } catch (error) {
+        throw new Error('Error al buscar la transacción en la base de datos: ' + error.message);
     }
 }
 
@@ -313,7 +329,9 @@ app.post('/transaction/create', async (req, res) => {
         console.log(req.body);
         console.log("Se recibio una solicitud de transaccion");
         console.log(flight_id, quantity, user_id)
-    
+
+        request_id = await reservarFlight(flight_id, quantity);
+
         const newTrx = await createTransaction(flight_id, quantity, user_id);
     
         console.log("Se creo una nueva transaccion");
@@ -327,8 +345,12 @@ app.post('/transaction/create', async (req, res) => {
         
         await updateTransactionToken(newTrx.id, trx.token);
 
+        const response = {
+            ...trx,
+            request_id
+        }
         // res
-        res.status(200).json(trx);
+        res.status(200).json(response);
     } catch (e) {
     console.log(e);
     }
@@ -336,11 +358,12 @@ app.post('/transaction/create', async (req, res) => {
 });
 
 app.post('/transaction/commit', authenticateToken, async (req, res) => {
-    const { ws_token } = req.body;
+    const { ws_token, request_id } = req.body;
     if (!ws_token || ws_token == "") {
       res.status(200).json({
         message: "Transaccion anulada por el usuario"
       });
+      await validateFlightRequest(request_id, false, ws_token, req);
       return;
     }
     const confirmedTx = await tx.commit(ws_token);
@@ -353,10 +376,12 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
         quantity: trx.quantity
   
       });
+      await validateFlightRequest(request_id, false, ws_token, req);
       return;
     }
     
     await updateTransactionStatus('completed', ws_token);
+    await validateFlightRequest(request_id, true, ws_token, req);
 
     res.status(200).json ({
       message: "Transaccion ha sido aceptada",
@@ -367,15 +392,47 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
 });
 
 
+async function reservarFlight(flightID, ticketsToBook){
+    try {
+        // Buscar el vuelo actual en la base de datos
+        const flight = await findFlightById(flightID);
 
+        // Actualizar la cantidad de tickets disponibles
+        const updatedTicketsLeft = flight.tickets_left - ticketsToBook;
+        await updateFlightTickets(flightID, updatedTicketsLeft);
+        
+        const requestResponse = {
+            "request_id": uuidv4().toString(),
+            "group_id": "28",
+            "departure_airport": flight.departure_airport_id,
+            "arrival_airport": flight.arrival_airport_id,
+            "departure_time": await formatearFechaVuelo(flight.departure_airport_time),
+            "datetime": new Date().toISOString(),
+            "deposit_token": "",  // Asigna un token si es necesario
+            "quantity": ticketsToBook,
+            "seller": 0
+        };
+
+        const request_id = mqtt_request.publishRequest(requestResponse);
+        return request_id;
+        
+    } catch (error) {
+        throw new Error('Error al reservar tickets de vuelo: ' + error.message);
+    }
+}
 
 // Endpoint para reservar tickets de un vuelo específico
-app.post('/flights/:id/reservar', authenticateToken, async (req, res) => {
-    const flightId = req.params.id;
-    const ticketsToBook = req.body.ticketsToBook;  // La cantidad de tickets a descontar
 
+async function validateFlightRequest(request_id, valid, token, req) {
     try {
-
+        const validResponse = {
+            "request_id": request_id,
+            "group_id": "28",
+            "seller": 0,
+            "valid": valid
+        };
+        mqtt_validation.publishValidation(validResponse);
+        
         const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
         let clientCity;
         if (!clientIp) {
@@ -391,6 +448,23 @@ app.post('/flights/:id/reservar', authenticateToken, async (req, res) => {
             }
         }
 
+        const transaction = await findTransactionByToken(token);
+
+        const query = 'INSERT INTO purchases (flight_id, user_id, quantity, total_price, purchase_date, location) VALUES ($1, $2, $3, $4, $5, $6)';
+        const values = [transaction.flight_id, transaction.user_id, transaction.quantity, transaction.amount, new Date(), clientCity];
+        dbClient.query(query, values);
+
+    } catch (error) {
+        throw new Error('Error al validar la solicitud de vuelo: ' + error.message);
+    }
+}
+
+
+app.post('/flights/:id/check', authenticateToken, async (req, res) => {
+    const flightId = req.params.id;
+    const ticketsToBook = req.body.ticketsToBook;  // La cantidad de tickets a descontar
+
+    try {
         // Buscar el vuelo actual en la base de datos
         const flight = await findFlightById(flightId);
         if (!flight) {
@@ -403,78 +477,12 @@ app.post('/flights/:id/reservar', authenticateToken, async (req, res) => {
         } else if (ticketsToBook <= 0) {
             throw new Error("La cantidad de tickets a reservar debe ser mayor que cero");
         }
-
-        // Actualizar la cantidad de tickets disponibles
-        const updatedTicketsLeft = flight.tickets_left - ticketsToBook;
-        await updateFlightTickets(flightId, updatedTicketsLeft);
-        
-        // Enviar request al canal flights/request para verificar el vuelo
-
-        // Crear el id y todo aqui y llamar al otro servicio
-        // Crear un uuid
-
-        // Crear la logica del token
-        const webpayTokenURL = "http://localhost:3010/transaction/create";
-        const webpayToken = await fetch(webpayTokenURL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Auth': 'Bearer ' + req.token
-            },
-            body: JSON.stringify({ amount: flight.price, ticketsToBook })
-        });
-
-        console.log('Webpay token:', webpayToken);
-
-        // Creamos la transaccion:
-        // ----
-
-
-        const requestResponse = {
-            "request_id": uuidv4().toString(),
-            "group_id": "28",
-            "departure_airport": flight.departure_airport_id,
-            "arrival_airport": flight.arrival_airport_id,
-            "departure_time": await formatearFechaVuelo(flight.departure_airport_time),
-            "datetime": new Date().toISOString(),
-            "deposit_token": "",  // Asigna un token si es necesario
-            "quantity": ticketsToBook,
-            "seller": 0
-        };
-
-        const request_id = mqtt.publishRequest(requestResponse);
-        console.log('Request ID:', request_id);
-
-        mqtt.onValidationReceived = (validation) => {
-            if (validation.request_id === request_id && validation.group_id === 28) {
-                console.log('Validation received:', validation);
-                if (validation.valid) {
-                    console.log('Validation approved');
-                    // Guardar la compra en la base de datos
-
-                    // Obtener el id de usuario de la solicitud
-                    let user_id = req.user.id;
-
-
-                    // Insertar la compra en la base de datos
-                    const query = 'INSERT INTO purchases (flight_id, user_id, quantity, total_price, purchase_date, location) VALUES ($1, $2, $3, $4, $5, $6)';
-                    const values = [flightId, user_id, ticketsToBook, flight.price * ticketsToBook, new Date(), clientCity];
-                    dbClient.query(query, values);
-
-                    res.json({ success: true, message: `Successfully booked ${ticketsToBook} tickets` });
-                } else {
-                    // Devolver los tickets reservados
-                    updateFlightTickets(flightId, flight.tickets_left + ticketsToBook);
-                    console.log('Validation denied');
-                }
-            }
-        }
-
-
+        res.status(200).json({ valid: true, flight: flight, ticketsToBook: ticketsToBook });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ valid: false, error: error.message });
     }
 });
+
 
 // Iniciar el servidor
 app.listen(port, () => {
