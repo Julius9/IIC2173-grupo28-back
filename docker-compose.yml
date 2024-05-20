@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile_api
     ports:
-      - "3000:3000" 
+      - "3000:3000"
     networks:
       - app-network
     depends_on:
@@ -37,16 +37,16 @@ services:
       - DB_NAME=flights
       - JWT_SECRET=bfoODfWAhswIHuahRB4M1OQCdlJJODSaxnSiauttdmmYc_7FKXBysJLVwKph9LeLEvxAcayilGmOIYCo7-BoJg
     
+
   database:
     image: postgres:latest
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile_db
     ports:
       - "5432:5432"
     networks:
       - app-network
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -62,7 +62,41 @@ services:
       - app-network
     depends_on:
       - api
-  
+
+  job-master:
+    build:
+      dockerfile: Dockerfile_jobmaster
+    ports:
+      - "4004:4004"
+    networks:
+      - app-network
+    environment:
+      - REDIS_HOST=redis-15522.c250.eu-central-1-1.ec2.redns.redis-cloud.com
+      - REDIS_PORT=15522
+      - REDIS_PASS=OjeviBhBEGER0Nenbv8joBsVw5BBx2cR
+      - MASTER_PORT=4004
+
+
+  worker:
+    build:
+      dockerfile: Dockerfile_worker
+    networks:
+      - app-network
+    depends_on:
+      - job-master
+    deploy:
+      replicas: 3
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=flights
+      - GAPI_KEY=AIzaSyB74CumVXUzyEyzPpD57k_9s8XjR_fA4PA
+      - REDIS_HOST=redis-15522.c250.eu-central-1-1.ec2.redns.redis-cloud.com
+      - REDIS_PORT=15522
+      - REDIS_PASS=OjeviBhBEGER0Nenbv8joBsVw5BBx2cR
+
 networks:
   app-network:
     driver: bridge
