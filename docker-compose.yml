@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile_api
     ports:
-      - "3000:3000" 
+      - "3000:3000"
     networks:
       - app-network
     depends_on:
@@ -40,20 +40,18 @@ services:
     
   database:
     image: postgres:latest
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile_db
     ports:
       - "5432:5432"
     networks:
       - app-network
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
-
 
   mqtt-client:
     build:
@@ -63,6 +61,24 @@ services:
       - app-network
     depends_on:
       - api
+
+  job-master:
+    build:
+      dockerfile: Dockerfile_jobmaster
+    ports:
+      - "4004:4004"
+    networks:
+      - app-network
+
+  worker:
+    build:
+      dockerfile: Dockerfile_worker
+    networks:
+      - app-network
+    depends_on:
+      - job-master
+    deploy:
+      replicas: 3
 
 networks:
   app-network:
