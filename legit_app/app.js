@@ -164,6 +164,8 @@ async function updateTransactionStatus(status, token) {
     const query = 'UPDATE transaction SET status = $1 WHERE token = $2';
     const values = [status, token];
     await dbClient.query(query, values);
+
+    return await findTransactionByToken(token);
 }
 
 async function updateTransactionToken(transaction_id, token) {
@@ -330,7 +332,7 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
         console.log("Se recibio una solicitud de transaccion");
         console.log(flight_id, quantity, user_id)
 
-        request_id = await reservarFlight(flight_id, quantity);
+        const request_id = await reservarFlight(flight_id, quantity);
 
         const newTrx = await createTransaction(flight_id, quantity, user_id);
     
@@ -369,7 +371,7 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
     const confirmedTx = await tx.commit(ws_token);
   
     if (confirmedTx.response_code != 0) { // Rechaza la compra
-      await updateTransactionStatus('rejected', ws_token);
+      const trx = await updateTransactionStatus('rejected', ws_token);
       res.status(200).json( {
         message: "Transaccion ha sido rechazada",
         flight: trx.flight_id,
