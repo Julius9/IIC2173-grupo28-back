@@ -323,7 +323,7 @@ app.get('/flights/:id', async (req, res) => {
     }
 });
 
-app.post('/transaction/create', async (req, res) => {
+app.post('/transaction/create', authenticateToken, async (req, res) => {
     try {
         const { flight_id, quantity, user_id } = req.body;
         console.log(req.body);
