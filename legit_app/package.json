@@ -19,6 +19,7 @@
     "mqtt": "^5.5.2",
     "node-ipinfo": "^3.5.1",
     "pg": "^8.11.4",
+    "transbank-sdk": "^5.0.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

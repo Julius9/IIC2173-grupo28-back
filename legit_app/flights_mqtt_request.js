@@ -6,21 +6,6 @@ const client = mqtt.connect('mqtt://broker.iic2173.org:9000', {
     password: 'iic2173-2024-1-students'
 });
 
-client.on('connect', () => {
-    console.log('Connected to MQTT broker.');
-    client.subscribe('flights/validation');
-});
-
-client.on('message', (topic, message) => {
-    if (topic === 'flights/validation') {
-        const validation = JSON.parse(message.toString());
-        console.log('Validation received:', validation);
-        // Llamada a una función de callback cuando se recibe la validación
-        if (mqttHandler.onValidationReceived) {
-            mqttHandler.onValidationReceived(validation);
-        }
-    }
-});
 
 // const publishUsingPython = (json_msg) => {
 //     // Preparar el comando para ejecutar el script Python con el mensaje JSON como argumento
@@ -57,7 +42,6 @@ const mqttHandler = {
     },
     onValidationReceived: null  // Placeholder para la función de callback
 };
-
 // Suponiendo que tu script Python se llama `flights_mqtt_request.py` y está en el mismo directorio
 
 
