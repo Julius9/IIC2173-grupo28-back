@@ -4,10 +4,10 @@ const express = require('express');
 
 // Configuración de la conexión Redis
 const redisConfig = {
-    host: 'redis-15522.c250.eu-central-1-1.ec2.redns.redis-cloud.com',
-    port: 15522,
-    password: 'OjeviBhBEGER0Nenbv8joBsVw5BBx2cR',
-  };
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  password: process.env.REDIS_PASS,
+};
 
 // Crear una cola de Bull
 const recommendationQueue = new Queue('flight-recommendation', { redis: redisConfig });
@@ -44,7 +44,7 @@ addJobToQueue({ flightId: '12345', userId: 'user1' });
 const app = express();
 app.use(express.json()); // Para manejar solicitudes JSON
 
-const port = 4004;
+const port = process.env.MASTER_PORT;
 
 // Endpoint para crear trabajos
 app.post('/job', async (req, res) => {

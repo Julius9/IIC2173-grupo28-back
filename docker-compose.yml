@@ -38,6 +38,7 @@ services:
       - DB_NAME=flights
       - JWT_SECRET=bfoODfWAhswIHuahRB4M1OQCdlJJODSaxnSiauttdmmYc_7FKXBysJLVwKph9LeLEvxAcayilGmOIYCo7-BoJg
     
+
   database:
     image: postgres:latest
     build:
@@ -53,6 +54,7 @@ services:
       timeout: 5s
       retries: 5
 
+
   mqtt-client:
     build:
       context: .
@@ -62,6 +64,7 @@ services:
     depends_on:
       - api
 
+
   job-master:
     build:
       dockerfile: Dockerfile_jobmaster
@@ -69,6 +72,12 @@ services:
       - "4004:4004"
     networks:
       - app-network
+    environment:
+      - REDIS_HOST=redis-15522.c250.eu-central-1-1.ec2.redns.redis-cloud.com
+      - REDIS_PORT=15522
+      - REDIS_PASS=OjeviBhBEGER0Nenbv8joBsVw5BBx2cR
+      - MASTER_PORT=4004
+
 
   worker:
     build:
@@ -79,6 +88,17 @@ services:
       - job-master
     deploy:
       replicas: 3
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=flights
+      - GAPI_KEY=AIzaSyB74CumVXUzyEyzPpD57k_9s8XjR_fA4PA
+      - REDIS_HOST=redis-15522.c250.eu-central-1-1.ec2.redns.redis-cloud.com
+      - REDIS_PORT=15522
+      - REDIS_PASS=OjeviBhBEGER0Nenbv8joBsVw5BBx2cR
+
 
 networks:
   app-network:
