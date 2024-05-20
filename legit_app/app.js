@@ -369,9 +369,11 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
       return;
     }
     const confirmedTx = await tx.commit(ws_token);
-  
+    
+    let trx;
+
     if (confirmedTx.response_code != 0) { // Rechaza la compra
-      const trx = await updateTransactionStatus('rejected', ws_token);
+      trx = await updateTransactionStatus('rejected', ws_token);
       res.status(200).json( {
         message: "Transaccion ha sido rechazada",
         flight: trx.flight_id,
@@ -382,7 +384,7 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
       return;
     }
     
-    await updateTransactionStatus('completed', ws_token);
+    trx = await updateTransactionStatus('completed', ws_token);
     await validateFlightRequest(request_id, true, ws_token, req);
 
     res.status(200).json ({
