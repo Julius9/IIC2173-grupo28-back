@@ -9,10 +9,26 @@ const { v4: uuidv4 } = require('uuid');
 const { IPinfoWrapper } = require("node-ipinfo");
 const authenticateToken = require('./authenticateToken');
 
+var cors = require('cors');
+
+// Configuración de la aplicación
+
+// enable cors:
+const corsOptions = {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Headers', 'Origin','Accept', 'X-Requested-With', 'Content-Type', 'Access-Control-Request-Method', 'Access-Control-Request-Headers', 'Auth'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
+
 
 
 
 const app = express();
+app.use(cors(corsOptions));
 const port = process.env.PORT || 3000;
 
 // Ruta al archivo de configuración
@@ -199,15 +215,15 @@ app.get('/flights', async (req, res) => {
             query += ' WHERE departure_airport_id = $1 AND arrival_airport_id = $2 AND departure_airport_time::date = $3';
             queryParams.push(departure, arrival, date);
         }
-        else if (departure && date) {
+        else if (arrival && date) {
             console.log('Filtrar por salida y fecha');
-            query += ' WHERE departure_airport_id = $1 AND departure_airport_time::date = $2';
-            queryParams.push(departure, date);
+            query += ' WHERE arrival_airport_id = $1 AND departure_airport_time::date = $2';
+            queryParams.push(arrival, date);
         }
-        else if (departure) {
+        else if (arrival) {
             console.log('Filtrar por salida');
-            query += ' WHERE departure_airport_id = $1';
-            queryParams.push(departure);
+            query += ' WHERE arrival_airport_id = $1';
+            queryParams.push(arrival);
         }
         else if (date) {
             console.log('Filtrar por fecha');
