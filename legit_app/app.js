@@ -327,10 +327,11 @@ app.get('/flights/:id', async (req, res) => {
 
 app.post('/transaction/create', authenticateToken, async (req, res) => {
     try {
-        const { flight_id, quantity, user_id } = req.body;
+        const { flight_id, quantity } = req.body;
         console.log(req.body);
         console.log("Se recibio una solicitud de transaccion");
-        console.log(flight_id, quantity, user_id)
+        
+        const user_id = req.user.id;
 
         const request_id = await reservarFlight(flight_id, quantity);
 
