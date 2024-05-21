@@ -37,7 +37,7 @@ async function addJobToQueue(jobData) {
 
 
 // Prueba para saber que todo esta Okey!
-addJobToQueue({ flightId: '12345', userId: 'user1' });
+// addJobToQueue({ flightId: '12345', userId: 'user1' });
 
 
 // PARTE 2: servicio de aplicacion
