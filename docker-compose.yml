@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
   api:
@@ -12,13 +13,13 @@ services:
       database:
         condition: service_healthy
     environment:
-      - DB_HOST=database
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=flights
-      - JWT_SECRET=bfoODfWAhswIHuahRB4M1OQCdlJJODSaxnSiauttdmmYc_7FKXBysJLVwKph9LeLEvxAcayilGmOIYCo7-BoJg
-    
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+
   auth:
     build:
       context: .
@@ -30,13 +31,12 @@ services:
     depends_on:
       - api
     environment:
-      - DB_HOST=database
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=flights
-      - JWT_SECRET=bfoODfWAhswIHuahRB4M1OQCdlJJODSaxnSiauttdmmYc_7FKXBysJLVwKph9LeLEvxAcayilGmOIYCo7-BoJg
-    
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
 
   database:
     image: postgres:latest
@@ -47,12 +47,15 @@ services:
       - "5432:5432"
     networks:
       - app-network
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
-
 
   mqtt-client:
     build:
@@ -71,11 +74,11 @@ services:
     networks:
       - app-network
     environment:
-      - REDIS_HOST=redis-15522.c250.eu-central-1-1.ec2.redns.redis-cloud.com
-      - REDIS_PORT=15522
-      - REDIS_PASS=OjeviBhBEGER0Nenbv8joBsVw5BBx2cR
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASS=${REDIS_PASS}
       - MASTER_PORT=4004
-
+      - JWT_SECRET=${JWT_SECRET}
 
   worker:
     build:
@@ -87,16 +90,18 @@ services:
     deploy:
       replicas: 3
     environment:
-      - DB_HOST=database
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=flights
-      - GAPI_KEY=AIzaSyB74CumVXUzyEyzPpD57k_9s8XjR_fA4PA
-      - REDIS_HOST=redis-15522.c250.eu-central-1-1.ec2.redns.redis-cloud.com
-      - REDIS_PORT=15522
-      - REDIS_PASS=OjeviBhBEGER0Nenbv8joBsVw5BBx2cR
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - GAPI_KEY=${GAPI_KEY}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASS=${REDIS_PASS}
+      - JWT_SECRET=${JWT_SECRET}
 
 networks:
   app-network:
     driver: bridge
+
