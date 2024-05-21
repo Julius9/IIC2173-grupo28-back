@@ -78,6 +78,7 @@ services:
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASS=${REDIS_PASS}
       - MASTER_PORT=4004
+      - JWT_SECRET=${JWT_SECRET}
 
   worker:
     build:
@@ -98,6 +99,7 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASS=${REDIS_PASS}
+      - JWT_SECRET=${JWT_SECRET}
 
 networks:
   app-network:

@@ -1,6 +1,22 @@
 const Queue = require('bull');
 const express = require('express');
+const authenticateToken = require('./authenticateToken');
 // require('dotenv').config();
+var cors = require('cors');
+
+
+// Configuración de la aplicación
+// enable cors:
+const corsOptions = {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Headers', 'Origin','Accept', 'X-Requested-With', 'Content-Type', 'Access-Control-Request-Method', 'Access-Control-Request-Headers', 'Auth'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
+
 
 // Configuración de la conexión Redis
 const redisConfig = {
@@ -35,22 +51,27 @@ async function addJobToQueue(jobData) {
   }
 }
 
+
 // PARTE 2: servicio de aplicación
 const app = express();
 app.use(express.json()); // Para manejar solicitudes JSON
-
+app.use(cors(corsOptions));
 const port = process.env.MASTER_PORT || 4004;
 
+
 // Endpoint para crear trabajos
-app.post('/job', async (req, res) => {
+app.post('/job', authenticateToken, async (req, res) => {
   try {
     const jobData = req.body;
+    jobData.userId = req.user.id
+    
     const jobId = await addJobToQueue(jobData);
     res.status(200).json({ id: jobId, message: 'Job created successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // Endpoint para obtener el estado de un trabajo
 app.get('/job/:id', async (req, res) => {
@@ -70,6 +91,7 @@ app.get('/job/:id', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // Endpoint de heartbeat para verificar si el servicio está operativo
 app.get('/heartbeat', (req, res) => {
