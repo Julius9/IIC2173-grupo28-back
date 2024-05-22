@@ -93,6 +93,32 @@ app.get('/job/:id', async (req, res) => {
 });
 
 
+// Endpoint para obtener el ultimo trabajo asociado a un usuario
+app.get('/latest', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const jobs = await recommendationQueue.getJobs(['completed']);
+    const latestJob = jobs
+      .filter(job => job.data.userId === userId)
+      .sort((a, b) => b.timestamp - a.timestamp)[0];
+
+    if (latestJob) {
+      res.status(200).json({
+        id: latestJob.id,
+        state: await latestJob.getState(),
+        data: latestJob.data,
+        result: latestJob.returnvalue,
+        completedAt: new Date(latestJob.finishedOn).toISOString()
+      });
+    } else {
+      res.status(404).json({ message: 'No jobs found for this user' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 // Endpoint de heartbeat para verificar si el servicio está operativo
 app.get('/heartbeat', (req, res) => {
   res.status(200).json({ operational: true });
