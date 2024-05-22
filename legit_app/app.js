@@ -373,6 +373,7 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
       return;
     }
     console.log("Se recibio una solicitud de commit 2", ws_token);
+    console.log("transaccion: ", tx);
     const confirmedTx = await tx.commit(ws_token);
     console.log("Se confirmo la transaccion");
     let trx;
