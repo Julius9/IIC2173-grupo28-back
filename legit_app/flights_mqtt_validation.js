@@ -11,7 +11,7 @@ const mqttHandler = {
     publishValidation: (message) => {
         const json_msg = JSON.stringify(message); // Convertir mensaje a JSON
         console.log('Publishing validation:', json_msg);
-        client.publish('flights/validation', json_msg, (err) => { // Asegúrate de enviar json_msg
+        client.publish('stocks/validation', json_msg, (err) => { // Asegúrate de enviar json_msg
             if (err) {
                 console.error('Failed to publish message:', err);
             } else {

@@ -362,6 +362,9 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
 
 app.post('/transaction/commit', authenticateToken, async (req, res) => {
     const { ws_token, request_id } = req.body;
+    console.log(req.body);
+    console.log("Se recibio una solicitud de commit 1", ws_token);
+
     if (!ws_token || ws_token == "") {
       res.status(200).json({
         message: "Transaccion anulada por el usuario"
@@ -369,8 +372,9 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
       await validateFlightRequest(request_id, false, ws_token, req);
       return;
     }
+    console.log("Se recibio una solicitud de commit 2", ws_token);
     const confirmedTx = await tx.commit(ws_token);
-    
+    console.log("Se confirmo la transaccion");
     let trx;
 
     if (confirmedTx.response_code != 0) { // Rechaza la compra
