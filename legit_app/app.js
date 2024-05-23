@@ -11,6 +11,8 @@ const { IPinfoWrapper } = require("node-ipinfo");
 const authenticateToken = require('./authenticateToken');
 const tx = require('./utils/trx');
 
+const WebpayPlus = require("transbank-sdk").WebpayPlus;
+
 var cors = require('cors');
 
 // Configuración de la aplicación
@@ -344,9 +346,11 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
         const transactionID = newTrx.id.toString();
         const amount = quantity * Number(newTrx.amount);
         // // USO: tx.create(transactionId, nombreComercio, monto, urlRetorno)
-        const trx = await tx.create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:5173/compra-completada");
+        const createResponse = await (new WebpayPlus.Transaction()).create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:5173/compra-completada");
+        // const trx = await tx.create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:5173/compra-completada");
         
-        await updateTransactionToken(newTrx.id, trx.token);
+        // await updateTransactionToken(newTrx.id, trx.token);
+        await updateTransactionToken(newTrx.id, createResponse.token);
 
         const response = {
             ...trx,
@@ -373,8 +377,11 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
       return;
     }
     console.log("Se recibio una solicitud de commit 2", ws_token);
-    console.log("transaccion: ", tx);
-    const confirmedTx = await tx.commit(ws_token);
+    // console.log("transaccion: ", tx);
+
+    const confirmedTx = await (new WebpayPlus.Transaction()).commit(ws_token);
+    // const confirmedTx = await tx.commit(ws_token);
+
     console.log("Se confirmo la transaccion");
     let trx;
 
