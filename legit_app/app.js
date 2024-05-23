@@ -399,7 +399,7 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
         buy_order: transactionID,
         session_id: 'test-iic2173',
         amount: amount,
-        return_url: 'http://localhost:5173/compra-completada'
+        return_url: 'https://web.legitapp.org/compra-completada'
         };
         let dataPOST;
         // Realizar el POST request
