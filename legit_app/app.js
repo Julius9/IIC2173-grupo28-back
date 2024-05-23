@@ -49,6 +49,9 @@ let lastUpdate = null;
 
 const ipinfo = new IPinfoWrapper(config.IPINFO_TOKEN);
 
+let lastFlightID;
+let lastToken;
+
 // Configuración de la conexión a la base de datos
 const dbClient = new Client({
     user: config.DB_USER,
@@ -417,7 +420,8 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
         //     ...trx,
         //     request_id
         // }
-
+        lastFlightID = flight_id;
+        lastToken = dataPOST.token;
         const response = {
             ...dataPOST,
             request_id
@@ -431,6 +435,8 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
     return;
 });
 
+
+
 app.post('/transaction/commit', authenticateToken, async (req, res) => {
     const { ws_token } = req.body;
     console.log(req.body);
@@ -438,12 +444,20 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
 
     const trxAux = await findTransactionByToken(ws_token);
     const request_id = trxAux.request_id;
+    let flight;
+    let trx;
 
     if (!ws_token || ws_token == "") {
+        
+        flight = await findFlightById(lastFlightID);
+        const updatedTicketsLeft = flight.tickets_left + trx.quantity;
+        await updateFlightTickets(lastFlightID, updatedTicketsLeft);
+        console.log("Se recibio una solicitud de commit OSTRAS", lastFlightID, lastToken);
+
       res.status(200).json({
         message: "Transaccion anulada por el usuario"
       });
-      await validateFlightRequest(request_id, false, ws_token, req);
+      await validateFlightRequest(request_id, false, lastToken, req);
       return;
     }
     console.log("Se recibio una solicitud de commit 2", ws_token);
@@ -478,11 +492,14 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
     // const confirmedTx = await tx.commit(ws_token);
 
     console.log("Se confirmo la transaccion");
-    let trx;
     console.log(dataPUT);
 
     if (dataPUT.response_code != 0) { // Rechaza la compra
       trx = await updateTransactionStatus('rejected', ws_token);
+        const flightID = trx.flight_id;
+        flight = await findFlightById(flightID);
+        const updatedTicketsLeft = flight.tickets_left + trx.quantity;
+        await updateFlightTickets(flightID, updatedTicketsLeft);
       res.status(200).json( {
         message: "Transaccion ha sido rechazada",
         flight: trx.flight_id,
@@ -494,7 +511,7 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
     
     trx = await updateTransactionStatus('completed', ws_token);
     await validateFlightRequest(request_id, true, ws_token, req);
-    
+    console.log("Estoy aqui!!! 23")
     res.status(200).json ({
       message: "Transaccion ha sido aceptada",
       flight: trx.flight_id,
@@ -570,22 +587,24 @@ async function validateFlightRequest(request_id, valid, token, req) {
         dbClient.query(query, values);
         // EMAIL.
         console.log("El id del usuario es", user_id)
-        const userEmail = await getUserEmailById(user_id);
-        console.log('Enviando correo electrónico de confirmación a:', userEmail);
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: userEmail,
-            subject: 'Confirmación de compra',
-            text: `Tu compra ha sido exitosa. Detalles:\nVuelo: ${transaction.flight_id}\nCantidad: ${transaction.quantity}\nMonto: ${transaction.amount}`
-        };
+        if (valid) {
+            const userEmail = await getUserEmailById(user_id);
+            console.log('Enviando correo electrónico de confirmación a:', userEmail);
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: userEmail,
+                subject: 'Confirmación de compra',
+                text: `Tu compra ha sido exitosa. Detalles:\nVuelo: ${transaction.flight_id}\nCantidad: ${transaction.quantity}\nMonto: ${transaction.amount}`
+            };
 
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error('Error al enviar el correo electrónico:', error);
-            } else {
-                console.log('Correo electrónico enviado:', info.response);
-            }
-        });
+            await transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    console.error('Error al enviar el correo electrónico:', error);
+                } else {
+                    console.log('Correo electrónico enviado:', info.response);
+                }
+            });
+        }
 
     } catch (error) {
         throw new Error('Error al validar la solicitud de vuelo: ' + error.message);
@@ -614,6 +633,31 @@ app.post('/flights/:id/check', authenticateToken, async (req, res) => {
     } catch (error) {
         res.status(400).json({ valid: false, error: error.message });
     }
+});
+
+app.get('/compras', authenticateToken, async (req, res) => {
+    try{
+        // Obtener el id de usuario de la solicitud
+        let user = req.user;
+        console.log(user.id);
+        let id;
+        id = user.id;  // ID de usuario temporal, cambiar por el id del usuario autenticado
+        //
+
+        // Consultar la base de datos para obtener las compras del usuario
+        const query = 'SELECT * FROM purchases INNER JOIN flights ON purchases.flight_id = flights.id WHERE user_id = $1';
+        const values = [id];
+        const result = await dbClient.query(query, values);
+
+        // Enviar la respuesta al cliente con las compras del usuario
+
+        res.json(result.rows);
+
+    } catch (error) {
+        res.status(404).json({ error: error.message });
+    
+    };
+
 });
 
 
