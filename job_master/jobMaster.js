@@ -128,3 +128,6 @@ app.get('/heartbeat', (req, res) => {
 app.listen(port, () => {
   console.log(`Job Master running on port ${port}`);
 });
+
+
+module.exports = app;
