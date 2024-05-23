@@ -11,6 +11,8 @@ const { IPinfoWrapper } = require("node-ipinfo");
 const authenticateToken = require('./authenticateToken');
 // const tx = require('./utils/trx');
 const axios = require('axios');
+const transporter = require('./mailer'); // Importa el módulo de correo
+
 
 // const WebpayPlus = require("transbank-sdk").WebpayPlus;
 
@@ -182,6 +184,25 @@ async function updateTransactionRequestID(transaction_id, request_id) {
     const values = [request_id, transaction_id];
     await dbClient.query(query, values);
 }
+async function getUserEmailById(userId) {
+    const query = 'SELECT mail FROM users WHERE id = $1';
+    const values = [userId];
+    try {
+        const result = await dbClient.query(query, values);
+        console.log(result);
+        console.log(result.rows);
+        if (result.rows.length > 0) {
+            return result.rows[0].mail;
+        } else {
+            throw new Error('No se encontró el usuario con el ID proporcionado');
+        }
+    } catch (error) {
+        console.error('Error al obtener el correo electrónico del usuario:', error.message);
+        throw new Error('Error al obtener el correo electrónico del usuario');
+    }
+}
+
+
 
 // Endpoint para recibir nuevos vuelos
 app.post('/flights', async (req, res) => {
@@ -241,6 +262,8 @@ app.post('/flights', async (req, res) => {
 // Endpoint para obtener la lista de vuelos filtrados y paginados
 app.get('/flights', async (req, res) => {
     try {
+
+
         console.log('Obteniendo lista de vuelos filtrada y paginada...');
         // Obtener los parámetros de consulta
         const departure = req.query.departure;
@@ -262,6 +285,7 @@ app.get('/flights', async (req, res) => {
         console.log('departure:', departure);
         console.log('arrival:', arrival);
         console.log('date:', date);
+
 
 
         // Agregar filtros si se proporcionan en la URL
@@ -296,7 +320,6 @@ app.get('/flights', async (req, res) => {
         // Construir la respuesta paginada
         const flights = result.rows;
         const totalPages = Math.ceil(flights.length / count);
-        
 
 
         // Crear el objeto de respuesta
@@ -471,7 +494,7 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
     
     trx = await updateTransactionStatus('completed', ws_token);
     await validateFlightRequest(request_id, true, ws_token, req);
-
+    
     res.status(200).json ({
       message: "Transaccion ha sido aceptada",
       flight: trx.flight_id,
@@ -529,7 +552,7 @@ async function validateFlightRequest(request_id, valid, token, req) {
         let clientCity;
         if (!clientIp) {
             // throw new Error('No se pudo obtener la dirección IP del cliente.');
-            clientCity = 'Desconocido';
+            clientCity = "Desconocido"; 
         } else {
             try {
                 // Se guarda la ciudad del cliente
@@ -546,6 +569,23 @@ async function validateFlightRequest(request_id, valid, token, req) {
         const values = [transaction.flight_id, transaction.user_id, transaction.quantity, transaction.amount, new Date(), clientCity];
         dbClient.query(query, values);
         // EMAIL.
+        console.log("El id del usuario es", user_id)
+        const userEmail = await getUserEmailById(user_id);
+        console.log('Enviando correo electrónico de confirmación a:', userEmail);
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: userEmail,
+            subject: 'Confirmación de compra',
+            text: `Tu compra ha sido exitosa. Detalles:\nVuelo: ${transaction.flight_id}\nCantidad: ${transaction.quantity}\nMonto: ${transaction.amount}`
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error('Error al enviar el correo electrónico:', error);
+            } else {
+                console.log('Correo electrónico enviado:', info.response);
+            }
+        });
 
     } catch (error) {
         throw new Error('Error al validar la solicitud de vuelo: ' + error.message);
