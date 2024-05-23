@@ -9,9 +9,10 @@ const mqtt_validation = require('./flights_mqtt_validation');
 const { v4: uuidv4 } = require('uuid');
 const { IPinfoWrapper } = require("node-ipinfo");
 const authenticateToken = require('./authenticateToken');
-const tx = require('./utils/trx');
+// const tx = require('./utils/trx');
+const axios = require('axios');
 
-const WebpayPlus = require("transbank-sdk").WebpayPlus;
+// const WebpayPlus = require("transbank-sdk").WebpayPlus;
 
 var cors = require('cors');
 
@@ -346,16 +347,51 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
         const transactionID = newTrx.id.toString();
         const amount = quantity * Number(newTrx.amount);
         // // USO: tx.create(transactionId, nombreComercio, monto, urlRetorno)
-        const createResponse = await (new WebpayPlus.Transaction()).create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:5173/compra-completada");
+        // const createResponse = await (new WebpayPlus.Transaction()).create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:5173/compra-completada");
         // const trx = await tx.create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:5173/compra-completada");
+
+        const url = 'https://webpay3gint.transbank.cl/rswebpaytransaction/api/webpay/v1.2/transactions';
+
+        // Datos del encabezado
+        const headers = {
+        'Tbk-Api-Key-Id': '597055555532',
+        'Tbk-Api-Key-Secret': '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C',
+        'Content-Type': 'application/json'
+        };
+
+        // Datos del cuerpo del POST request
+        const data = {
+        buy_order: transactionID,
+        session_id: 'test-iic2173',
+        amount: amount,
+        return_url: 'http://localhost:5173/compra-completada'
+        };
+        let dataPOST;
+        // Realizar el POST request
+        await axios.post(url, data, { headers })
+        .then(response => {
+            console.log('Respuesta del servidor:', response.data);
+            dataPOST = response.data;
+        })
+        .catch(error => {
+            console.error('Error al hacer la solicitud:', error);
+        });
+
         
         // await updateTransactionToken(newTrx.id, trx.token);
-        await updateTransactionToken(newTrx.id, createResponse.token);
+        // await updateTransactionToken(newTrx.id, createResponse.token);
+        await updateTransactionToken(newTrx.id, dataPOST.token);
+
+        // const response = {
+        //     ...trx,
+        //     request_id
+        // }
 
         const response = {
-            ...trx,
+            ...dataPOST,
             request_id
         }
+
         // res
         res.status(200).json(response);
     } catch (e) {
@@ -379,19 +415,44 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
     console.log("Se recibio una solicitud de commit 2", ws_token);
     // console.log("transaccion: ", tx);
 
-    const confirmedTx = await (new WebpayPlus.Transaction()).commit(ws_token);
+    // const confirmedTx = await (new WebpayPlus.Transaction()).commit(ws_token);
+
+    const url = `https://webpay3gint.transbank.cl/rswebpaytransaction/api/webpay/v1.2/transactions/${ws_token}`;
+
+    // Datos del encabezado
+    const headers = {
+    'Tbk-Api-Key-Id': '597055555532',
+    'Tbk-Api-Key-Secret': '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C',
+    'Content-Type': 'application/json'
+    };
+    const data = {
+        // Aquí coloca los campos que deseas actualizar
+    };
+    let dataPUT;
+    // Realizar el PUT request
+    try {
+        const responsePUT = await axios.put(url, data, { headers });
+        dataPUT = responsePUT.data;
+        console.log("Se hizo!!")
+    } catch (error) {
+        console.error('Error al hacer la solicitud:', error);
+        return;
+    }
+
+    
+
     // const confirmedTx = await tx.commit(ws_token);
 
     console.log("Se confirmo la transaccion");
     let trx;
+    console.log(dataPUT);
 
-    if (confirmedTx.response_code != 0) { // Rechaza la compra
+    if (dataPUT.response_code != 0) { // Rechaza la compra
       trx = await updateTransactionStatus('rejected', ws_token);
       res.status(200).json( {
         message: "Transaccion ha sido rechazada",
         flight: trx.flight_id,
         quantity: trx.quantity
-  
       });
       await validateFlightRequest(request_id, false, ws_token, req);
       return;
@@ -440,8 +501,11 @@ async function reservarFlight(flightID, ticketsToBook){
 
 // Endpoint para reservar tickets de un vuelo específico
 
-async function validateFlightRequest(request_id, valid, token, req) {
+async function validateFlightRequest(request_id, valid, token, req, user_id) {
     try {
+
+        const user_id = req.user.id;
+
         const validResponse = {
             "request_id": request_id,
             "group_id": "28",
@@ -470,6 +534,7 @@ async function validateFlightRequest(request_id, valid, token, req) {
         const query = 'INSERT INTO purchases (flight_id, user_id, quantity, total_price, purchase_date, location) VALUES ($1, $2, $3, $4, $5, $6)';
         const values = [transaction.flight_id, transaction.user_id, transaction.quantity, transaction.amount, new Date(), clientCity];
         dbClient.query(query, values);
+        // EMAIL.
 
     } catch (error) {
         throw new Error('Error al validar la solicitud de vuelo: ' + error.message);
