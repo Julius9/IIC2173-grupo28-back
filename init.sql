@@ -44,6 +44,7 @@ CREATE TABLE transaction (
     quantity INT NOT NULL,
     status VARCHAR(255) NOT NULL,
     flight_id INT NOT NULL,
+    request_id VARCHAR(255) NULL,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (flight_id) REFERENCES flights(id)
 );

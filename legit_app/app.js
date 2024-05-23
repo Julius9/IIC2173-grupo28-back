@@ -177,6 +177,12 @@ async function updateTransactionToken(transaction_id, token) {
     await dbClient.query(query, values);
 }
 
+async function updateTransactionRequestID(transaction_id, request_id) {
+    const query = 'UPDATE transaction SET request_id = $1 WHERE id = $2';
+    const values = [request_id, transaction_id];
+    await dbClient.query(query, values);
+}
+
 // Endpoint para recibir nuevos vuelos
 app.post('/flights', async (req, res) => {
     try {
@@ -339,6 +345,8 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
         const request_id = await reservarFlight(flight_id, quantity);
 
         const newTrx = await createTransaction(flight_id, quantity, user_id);
+
+        await updateTransactionRequestID(newTrx.id, request_id);
     
         console.log("Se creo una nueva transaccion");
         // hacer transaccionID a string
@@ -401,9 +409,12 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
 });
 
 app.post('/transaction/commit', authenticateToken, async (req, res) => {
-    const { ws_token, request_id } = req.body;
+    const { ws_token } = req.body;
     console.log(req.body);
     console.log("Se recibio una solicitud de commit 1", ws_token);
+
+    const trxAux = await findTransactionByToken(ws_token);
+    const request_id = trxAux.request_id;
 
     if (!ws_token || ws_token == "") {
       res.status(200).json({
@@ -501,7 +512,7 @@ async function reservarFlight(flightID, ticketsToBook){
 
 // Endpoint para reservar tickets de un vuelo específico
 
-async function validateFlightRequest(request_id, valid, token, req, user_id) {
+async function validateFlightRequest(request_id, valid, token, req) {
     try {
 
         const user_id = req.user.id;
