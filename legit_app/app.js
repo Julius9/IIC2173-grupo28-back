@@ -443,12 +443,11 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
     console.log(req.body);
     console.log("Se recibio una solicitud de commit 1", ws_token);
 
-    const trxAux = await findTransactionByToken(ws_token);
-    const request_id = trxAux.request_id;
     let flight;
     let trx;
 
     if (!ws_token || ws_token == "") {
+        trx = await updateTransactionStatus('canceled', lastToken);
         
         flight = await findFlightById(lastFlightID);
         const updatedTicketsLeft = flight.tickets_left + trx.quantity;
@@ -458,10 +457,13 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
       res.status(200).json({
         message: "Transaccion anulada por el usuario"
       });
-      await validateFlightRequest(request_id, false, lastToken, req);
+      await validateFlightRequest(trx.request_id, false, lastToken, req);
       return;
     }
     console.log("Se recibio una solicitud de commit 2", ws_token);
+
+    const trxAux = await findTransactionByToken(ws_token);
+    const request_id = trxAux.request_id;
     // console.log("transaccion: ", tx);
 
     // const confirmedTx = await (new WebpayPlus.Transaction()).commit(ws_token);
@@ -506,12 +508,12 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
         flight: trx.flight_id,
         quantity: trx.quantity
       });
-      await validateFlightRequest(request_id, false, ws_token, req);
+      await validateFlightRequest(trx.request_id, false, ws_token, req);
       return;
     }
     
     trx = await updateTransactionStatus('completed', ws_token);
-    await validateFlightRequest(request_id, true, ws_token, req);
+    await validateFlightRequest(trx.request_id, true, ws_token, req);
     console.log("Estoy aqui!!! 23")
     res.status(200).json ({
       message: "Transaccion ha sido aceptada",
