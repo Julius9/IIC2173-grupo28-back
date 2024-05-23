@@ -1,3 +1,6 @@
 #Ignorar nodemodules de legit_app
-
+node_modules/
 legit_app/node_modules
+job_master/node_modules
+workers/node_modules
+.env

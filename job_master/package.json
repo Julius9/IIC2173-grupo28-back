@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "bull": "^4.12.6",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
