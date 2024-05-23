@@ -462,8 +462,6 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
     }
     console.log("Se recibio una solicitud de commit 2", ws_token);
 
-    const trxAux = await findTransactionByToken(ws_token);
-    const request_id = trxAux.request_id;
     // console.log("transaccion: ", tx);
 
     // const confirmedTx = await (new WebpayPlus.Transaction()).commit(ws_token);
