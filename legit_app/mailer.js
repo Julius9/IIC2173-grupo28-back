@@ -1,6 +1,6 @@
 // mailer.js
 const nodemailer = require('nodemailer');
-const path = require('path');
+// const path = require('path');
 
 // Configura el transportador de correo
 const transporter = nodemailer.createTransport({
