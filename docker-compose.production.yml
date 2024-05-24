@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile_api
+    image: public.ecr.aws/l7f1q4r9/iic2173-g28-api:latest
     ports:
       - "3000:3000"
     networks:
@@ -23,9 +21,7 @@ services:
       - EMAIL_PASS=${EMAIL_PASS}
 
   auth:
-    build:
-      context: .
-      dockerfile: Dockerfile_auth
+    image: public.ecr.aws/l7f1q4r9/iic2173-g28-auth:latest
     ports:
       - "3003:3003"
     networks:
@@ -41,10 +37,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
 
   database:
-    image: postgres:16.2
-    build:
-      context: .
-      dockerfile: Dockerfile_db
+    image: public.ecr.aws/l7f1q4r9/iic2173-g28-database:latest
     ports:
       - "5432:5432"
     networks:
@@ -60,18 +53,14 @@ services:
       retries: 5
 
   mqtt-client:
-    build:
-      context: .
-      dockerfile: Dockerfile_mqtt
+    image: public.ecr.aws/l7f1q4r9/iic2173-g28-mqtt-client:latest
     networks:
       - app-network
     depends_on:
       - api
 
   job-master:
-    build:
-      context: .
-      dockerfile: Dockerfile_jobmaster
+    image: public.ecr.aws/l7f1q4r9/iic2173-g28-job-master:latest
     ports:
       - "4004:4004"
     networks:
@@ -84,9 +73,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile_worker
+    image: public.ecr.aws/l7f1q4r9/iic2173-g28-worker:latest
     networks:
       - app-network
     depends_on:
@@ -108,4 +95,3 @@ services:
 networks:
   app-network:
     driver: bridge
-
