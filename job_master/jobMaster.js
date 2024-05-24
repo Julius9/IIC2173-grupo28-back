@@ -65,8 +65,12 @@ const port = process.env.MASTER_PORT || 4004;
 app.post('/job', authenticateToken, async (req, res) => {
   try {
     const jobData = req.body;
-    jobData.userId = req.user.id
+    jobData.userId = req.user.id;
     
+    // Obtener la IP del cliente
+    const clientIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    jobData.userIp = clientIp;
+
     const jobId = await addJobToQueue(jobData);
     res.status(200).json({ id: jobId, message: 'Job created successfully' });
   } catch (error) {
