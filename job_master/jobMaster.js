@@ -1,8 +1,10 @@
 const Queue = require('bull');
 const express = require('express');
 const authenticateToken = require('./authenticateToken');
-// require('dotenv').config();
+require('dotenv').config();
 var cors = require('cors');
+
+dotenv.config(); // Carga las variables de entorno de .env
 
 
 // Configuración de la aplicación
