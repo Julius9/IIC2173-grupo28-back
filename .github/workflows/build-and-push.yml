@@ -82,7 +82,7 @@ jobs:
       - name: Create CodeDeploy Deployment
         id: create-deployment-trigger
         run: |
-          deploymentId=$(aws deploy create-deployment --application-name IIC2173-CD-Ayudantia --deployment-group-name IIC2173-Group --region us-east-1 --s3-location bucket=iic2173-g28-cd,key=deploy.zip,bundleType=zip --description "Automatic deployment from githubactions commit ${{github.sha}}" | jq -r '.deploymentId')
+          deploymentId=$(aws deploy create-deployment --application-name IIC2173-g28-back --deployment-group-name group-iic2173 --region us-east-1 --s3-location bucket=iic2173-g28-cd,key=deploy.zip,bundleType=zip --description "Automatic deployment from githubactions commit ${{github.sha}}" | jq -r '.deploymentId')
           echo "DeploymentId=$deploymentId" >> $GITHUB_OUTPUT
     
       - name: Wait for deployment to finish
