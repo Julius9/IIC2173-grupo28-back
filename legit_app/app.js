@@ -6,6 +6,8 @@ const path = require('path');
 // Poner el path del archivo flights_mqtt_request_validation.js esta en la carpeta brokers , aqui abajo
 const mqtt_request = require('./flights_mqtt_request');
 const mqtt_validation = require('./flights_mqtt_validation');
+const mqtt_auctions = require('./flights_mqtt_auctions');
+
 const { v4: uuidv4 } = require('uuid');
 const { IPinfoWrapper } = require("node-ipinfo");
 const authenticateToken = require('./authenticateToken');
