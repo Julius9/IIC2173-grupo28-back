@@ -49,4 +49,57 @@ CREATE TABLE transaction (
     FOREIGN KEY (flight_id) REFERENCES flights(id)
 );
 
+CREATE TABLE internal_auction (
+    id SERIAL PRIMARY KEY,
+    auction_id VARCHAR(255) UNIQUE,
+    proposal_id VARCHAR(255),
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMP,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255),
+);
+
+CREATE TABLE external_auction (
+    id SERIAL PRIMARY KEY,
+    auction_id VARCHAR(255) UNIQUE,
+    proposal_id VARCHAR(255),
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMP,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255),
+);
+
+CREATE TABLE internal_proposal (
+    id SERIAL PRIMARY KEY,
+    proposal_id VARCHAR(255) UNIQUE,
+    auction_id VARCHAR(255),
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMP,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255),
+    expired BOOLEAN,
+);
+
+CREATE TABLE external_proposal (
+    id SERIAL PRIMARY KEY,
+    proposal_id VARCHAR(255) UNIQUE,
+    auction_id VARCHAR(255),
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMP,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255),
+);
+
 CREATE UNIQUE INDEX "Transaction_token_key" ON "transaction"("token");
