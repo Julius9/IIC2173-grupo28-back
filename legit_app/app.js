@@ -663,6 +663,54 @@ app.get('/compras', authenticateToken, async (req, res) => {
 
 });
 
+app.post('/flights/:id/auction', async (req, res) => {
+    const flightId = req.params.id;
+    const ticketsToPropose = req.body.ticketsToBook;  // La cantidad de tickets a descontar
+    console.log("Se recibio una solicitud de subasta");
+    console.log(req.body);
+    try {
+        // Buscar el vuelo actual en la base de datos
+        const flight = await findFlightById(flightId);
+        if (!flight) {
+            throw new Error("Vuelo no encontrado");
+        }
+
+        // Verificar si hay suficientes tickets disponibles
+        if (flight.tickets_left < ticketsToPropose) {
+            throw new Error("No hay suficientes tickets disponibles para reservar, seleccione una cantidad menor");
+        } else if (ticketsToPropose <= 0) {
+            throw new Error("La cantidad de tickets a reservar debe ser mayor que cero");
+        }
+
+        const query = 'INSERT INTO internal_auction (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, airline, quantity, group_id, type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *';
+        const values = [uuidv4().toString(), "", flight.departure_airport_id, flight.arrival_airport_id, flight.departure_airport_time, flight.airline, ticketsToPropose, "28", "offer"]
+        const result = await dbClient.query(query, values);
+        
+        const auctionResponse = {
+            auction_id: result.rows[0].auction_id,
+            proposal_id: result.rows[0].proposal_id,
+            departure_airport: result.rows[0].departure_airport,
+            arrival_airport: result.rows[0].arrival_airport,
+            departure_time: result.rows[0].departure_time,
+            airline: result.rows[0].airline,
+            quantity: result.rows[0].quantity,
+            group_id: result.rows[0].group_id,
+            type: result.rows[0].type
+        };
+
+        mqtt_auctions.publishAuction(auctionResponse);
+        
+        // restar tickets
+
+        const updatedTicketsLeft = flight.tickets_left - ticketsToPropose;
+        await updateFlightTickets(flightId, updatedTicketsLeft);
+
+        res.status(200).json({ valid: true, flight: flight, ticketsToBook: ticketsToPropose });
+    } catch (error) {
+        res.status(400).json({ valid: false, error: error.message });
+    }
+});
+
 
 // Iniciar el servidor
 app.listen(port, () => {

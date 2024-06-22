@@ -59,7 +59,7 @@ CREATE TABLE internal_auction (
     airline VARCHAR(255),
     quantity INT,
     group_id INT,
-    type VARCHAR(255),
+    type VARCHAR(255)
 );
 
 CREATE TABLE external_auction (
@@ -72,9 +72,8 @@ CREATE TABLE external_auction (
     airline VARCHAR(255),
     quantity INT,
     group_id INT,
-    type VARCHAR(255),
+    type VARCHAR(255)
 );
-
 CREATE TABLE internal_proposal (
     id SERIAL PRIMARY KEY,
     proposal_id VARCHAR(255) UNIQUE,
@@ -86,7 +85,7 @@ CREATE TABLE internal_proposal (
     quantity INT,
     group_id INT,
     type VARCHAR(255),
-    expired BOOLEAN,
+    expired BOOLEAN
 );
 
 CREATE TABLE external_proposal (
@@ -99,7 +98,7 @@ CREATE TABLE external_proposal (
     airline VARCHAR(255),
     quantity INT,
     group_id INT,
-    type VARCHAR(255),
+    type VARCHAR(255)
 );
 
 CREATE UNIQUE INDEX "Transaction_token_key" ON "transaction"("token");

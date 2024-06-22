@@ -28,7 +28,7 @@ client.on('message', (topic, message) => {
 });
 
 const mqttHandler = {
-    publishRequest: (message) => {
+    publishAuction: (message) => {
         const json_msg = JSON.stringify(message); // Convertir mensaje a JSON
         console.log('Publishing request:', json_msg);
         const request_id = message.request_id;
