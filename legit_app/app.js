@@ -712,6 +712,111 @@ app.post('/flights/:id/auction', async (req, res) => {
 });
 
 
+// OFERTAS DE LOS OTROS GRUPOS, DEBERIA HABER UN BOTON QUE DEJE PROPONER
+app.post('/flights/auction/offers', async (req, res) => {
+    try {
+        const query = 'SELECT * FROM external_auction';
+        const result = await dbClient.query(query);
+        res.json(result.rows);
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Este es un boton para hacer el proposal a una oferta de otro grupo
+app.post('/flights/propose', async (req, res) => {
+    try {
+        const proposalID = uuidv4().toString();
+        const auctionID = req.body.auction_id;
+
+        // buscar la oferta externa
+
+        const query = 'SELECT * FROM external_auction WHERE auction_id = $1';
+        const values = [auctionID];
+        const result = await dbClient.query(query, values);
+        const auction = result.rows[0];
+
+        const proposal = {
+            proposal_id: proposalID,
+            auction_id: auctionID,
+            departure_airport: req.body.departure_airport,
+            arrival_airport: req.body.arrival_airport,
+            departure_time: req.body.departure_time,
+            airline: req.body.airline,
+            quantity: req.body.quantity,
+            group_id: 28,
+            type: "proposal"
+        }
+
+        const query2 = 'INSERT INTO internal_proposal (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, airline, quantity, group_id, type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)';
+        const values2 = [proposal.auction_id, proposal.proposal_id, proposal.departure_airport, proposal.arrival_airport, proposal.departure_time, proposal.airline, proposal.quantity, proposal.group_id, proposal.type];
+        await dbClient.query(query2, values2);
+
+        mqtt_auctions.publishAuction(proposal);
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// PROPUESTAS QUE NOS LLEGAN POR LAS OFERTAS HECHAS
+
+app.post('/flights/auction/proposals', async (req, res) => {
+    try {
+        const query = 'SELECT * FROM external_proposal';
+        const result = await dbClient.query(query);
+        res.json(result.rows);
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    
+    }
+});
+
+// Respuesta a las propuestas que nos llegan
+
+app.post('/flights/auction/proposal/response', async (req, res) => {
+    try {
+        const proposalId = req.body.proposal_id;
+        const proposalResponse = req.body.response; // bool true = aceptar, false = rechazar
+        console.log("Se recibio una respuesta de subasta");
+        // buscar la propuesta externa
+        const query = 'SELECT * FROM internal_auction WHERE proposal_id = $1';
+        const values = [proposalId];
+        const result = await dbClient.query(query, values);
+
+        const proposal = result.rows[0];
+
+        const resolution = proposalResponse ? "acceptance" : "rejection";
+        const response = {
+            auction_id: proposal.auction_id,
+            proposal_id: proposal.proposal_id,
+            departure_airport: proposal.departure_airport,
+            arrival_airport: proposal.arrival_airport,
+            departure_time: proposal.departure_time,
+            airline: proposal.airline,
+            quantity: proposal.quantity,
+            group_id: proposal.group_id,
+            type: resolution
+        }
+
+        mqtt_auctions.publishAuction(response);
+        res.status(200).json({ message: "Respuesta enviada" });
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+
+app.post('/auctions/external', authenticateToken, async (req, res) => {
+    const query = 'SELECT * FROM external_auction';
+    const result = await dbClient.query(query);
+    res.json(result.rows);
+});
+
+
 // Iniciar el servidor
 app.listen(port, () => {
     console.log(`Servidor API escuchando en el puerto ${port}`);

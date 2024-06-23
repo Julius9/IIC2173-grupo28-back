@@ -76,8 +76,8 @@ CREATE TABLE external_auction (
 );
 CREATE TABLE internal_proposal (
     id SERIAL PRIMARY KEY,
-    proposal_id VARCHAR(255) UNIQUE,
     auction_id VARCHAR(255),
+    proposal_id VARCHAR(255) UNIQUE,
     departure_airport VARCHAR(255),
     arrival_airport VARCHAR(255),
     departure_time TIMESTAMP,
@@ -90,8 +90,8 @@ CREATE TABLE internal_proposal (
 
 CREATE TABLE external_proposal (
     id SERIAL PRIMARY KEY,
-    proposal_id VARCHAR(255) UNIQUE,
     auction_id VARCHAR(255),
+    proposal_id VARCHAR(255) UNIQUE,
     departure_airport VARCHAR(255),
     arrival_airport VARCHAR(255),
     departure_time TIMESTAMP,
