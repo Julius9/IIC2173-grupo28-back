@@ -31,6 +31,11 @@ module.exports = {
         allowNull: false,
         defaultValue: 5000.00
       },
+      admin: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
