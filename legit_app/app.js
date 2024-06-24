@@ -6,6 +6,8 @@ const path = require('path');
 // Poner el path del archivo flights_mqtt_request_validation.js esta en la carpeta brokers , aqui abajo
 const mqtt_request = require('./flights_mqtt_request');
 const mqtt_validation = require('./flights_mqtt_validation');
+const mqtt_auctions = require('./flights_mqtt_auctions');
+
 const { v4: uuidv4 } = require('uuid');
 const { IPinfoWrapper } = require("node-ipinfo");
 const authenticateToken = require('./authenticateToken');
@@ -399,7 +401,7 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
         buy_order: transactionID,
         session_id: 'test-iic2173',
         amount: amount,
-        return_url: 'http://localhost:5173/compra-completada'
+        return_url: 'https://web.legitapp.org/compra-completada'
         };
         let dataPOST;
         // Realizar el POST request
@@ -659,6 +661,159 @@ app.get('/compras', authenticateToken, async (req, res) => {
     
     };
 
+});
+
+app.post('/flights/:id/auction', async (req, res) => {
+    const flightId = req.params.id;
+    const ticketsToPropose = req.body.ticketsToBook;  // La cantidad de tickets a descontar
+    console.log("Se recibio una solicitud de subasta");
+    console.log(req.body);
+    try {
+        // Buscar el vuelo actual en la base de datos
+        const flight = await findFlightById(flightId);
+        if (!flight) {
+            throw new Error("Vuelo no encontrado");
+        }
+
+        // Verificar si hay suficientes tickets disponibles
+        if (flight.tickets_left < ticketsToPropose) {
+            throw new Error("No hay suficientes tickets disponibles para reservar, seleccione una cantidad menor");
+        } else if (ticketsToPropose <= 0) {
+            throw new Error("La cantidad de tickets a reservar debe ser mayor que cero");
+        }
+
+        const query = 'INSERT INTO internal_auction (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, airline, quantity, group_id, type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *';
+        const values = [uuidv4().toString(), "", flight.departure_airport_id, flight.arrival_airport_id, flight.departure_airport_time, flight.airline, ticketsToPropose, "28", "offer"]
+        const result = await dbClient.query(query, values);
+        
+        const auctionResponse = {
+            auction_id: result.rows[0].auction_id,
+            proposal_id: result.rows[0].proposal_id,
+            departure_airport: result.rows[0].departure_airport,
+            arrival_airport: result.rows[0].arrival_airport,
+            departure_time: result.rows[0].departure_time,
+            airline: result.rows[0].airline,
+            quantity: result.rows[0].quantity,
+            group_id: result.rows[0].group_id,
+            type: result.rows[0].type
+        };
+
+        mqtt_auctions.publishAuction(auctionResponse);
+        
+        // restar tickets
+
+        const updatedTicketsLeft = flight.tickets_left - ticketsToPropose;
+        await updateFlightTickets(flightId, updatedTicketsLeft);
+
+        res.status(200).json({ valid: true, flight: flight, ticketsToBook: ticketsToPropose });
+    } catch (error) {
+        res.status(400).json({ valid: false, error: error.message });
+    }
+});
+
+
+// OFERTAS DE LOS OTROS GRUPOS, DEBERIA HABER UN BOTON QUE DEJE PROPONER
+app.post('/flights/auction/offers', async (req, res) => {
+    try {
+        const query = 'SELECT * FROM external_auction';
+        const result = await dbClient.query(query);
+        res.json(result.rows);
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Este es un boton para hacer el proposal a una oferta de otro grupo
+app.post('/flights/propose', async (req, res) => {
+    try {
+        const proposalID = uuidv4().toString();
+        const auctionID = req.body.auction_id;
+
+        // buscar la oferta externa
+
+        const query = 'SELECT * FROM external_auction WHERE auction_id = $1';
+        const values = [auctionID];
+        await dbClient.query(query, values);
+        
+
+        const proposal = {
+            proposal_id: proposalID,
+            auction_id: auctionID,
+            departure_airport: req.body.departure_airport,
+            arrival_airport: req.body.arrival_airport,
+            departure_time: req.body.departure_time,
+            airline: req.body.airline,
+            quantity: req.body.quantity,
+            group_id: 28,
+            type: "proposal"
+        }
+
+        const query2 = 'INSERT INTO internal_proposal (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, airline, quantity, group_id, type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)';
+        const values2 = [proposal.auction_id, proposal.proposal_id, proposal.departure_airport, proposal.arrival_airport, proposal.departure_time, proposal.airline, proposal.quantity, proposal.group_id, proposal.type];
+        await dbClient.query(query2, values2);
+
+        mqtt_auctions.publishAuction(proposal);
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// PROPUESTAS QUE NOS LLEGAN POR LAS OFERTAS HECHAS
+
+app.post('/flights/auction/proposals', async (req, res) => {
+    try {
+        const query = 'SELECT * FROM external_proposal';
+        const result = await dbClient.query(query);
+        res.json(result.rows);
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    
+    }
+});
+
+// Respuesta a las propuestas que nos llegan
+
+app.post('/flights/auction/proposal/response', async (req, res) => {
+    try {
+        const proposalId = req.body.proposal_id;
+        const proposalResponse = req.body.response; // bool true = aceptar, false = rechazar
+        console.log("Se recibio una respuesta de subasta");
+        // buscar la propuesta externa
+        const query = 'SELECT * FROM internal_auction WHERE proposal_id = $1';
+        const values = [proposalId];
+        const result = await dbClient.query(query, values);
+
+        const proposal = result.rows[0];
+
+        const resolution = proposalResponse ? "acceptance" : "rejection";
+        const response = {
+            auction_id: proposal.auction_id,
+            proposal_id: proposal.proposal_id,
+            departure_airport: proposal.departure_airport,
+            arrival_airport: proposal.arrival_airport,
+            departure_time: proposal.departure_time,
+            airline: proposal.airline,
+            quantity: proposal.quantity,
+            group_id: proposal.group_id,
+            type: resolution
+        }
+
+        mqtt_auctions.publishAuction(response);
+        res.status(200).json({ message: "Respuesta enviada" });
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+
+app.post('/auctions/external', authenticateToken, async (req, res) => {
+    const query = 'SELECT * FROM external_auction';
+    const result = await dbClient.query(query);
+    res.json(result.rows);
 });
 
 

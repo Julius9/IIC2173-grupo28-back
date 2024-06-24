@@ -34,6 +34,7 @@ CREATE TABLE users (
     username VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     money DECIMAL(10, 2) NOT NULL DEFAULT 5000.00
+    admin BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE transaction (
@@ -47,6 +48,58 @@ CREATE TABLE transaction (
     request_id VARCHAR(255) NULL,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (flight_id) REFERENCES flights(id)
+);
+
+CREATE TABLE internal_auction (
+    id SERIAL PRIMARY KEY,
+    auction_id VARCHAR(255) UNIQUE,
+    proposal_id VARCHAR(255),
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMP,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255)
+);
+
+CREATE TABLE external_auction (
+    id SERIAL PRIMARY KEY,
+    auction_id VARCHAR(255) UNIQUE,
+    proposal_id VARCHAR(255),
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMP,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255)
+);
+CREATE TABLE internal_proposal (
+    id SERIAL PRIMARY KEY,
+    auction_id VARCHAR(255),
+    proposal_id VARCHAR(255) UNIQUE,
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMP,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255),
+    expired BOOLEAN
+);
+
+CREATE TABLE external_proposal (
+    id SERIAL PRIMARY KEY,
+    auction_id VARCHAR(255),
+    proposal_id VARCHAR(255) UNIQUE,
+    departure_airport VARCHAR(255),
+    arrival_airport VARCHAR(255),
+    departure_time TIMESTAMP,
+    airline VARCHAR(255),
+    quantity INT,
+    group_id INT,
+    type VARCHAR(255)
 );
 
 CREATE UNIQUE INDEX "Transaction_token_key" ON "transaction"("token");
