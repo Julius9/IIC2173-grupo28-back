@@ -734,8 +734,8 @@ app.post('/flights/propose', async (req, res) => {
 
         const query = 'SELECT * FROM external_auction WHERE auction_id = $1';
         const values = [auctionID];
-        const result = await dbClient.query(query, values);
-        const auction = result.rows[0];
+        await dbClient.query(query, values);
+        
 
         const proposal = {
             proposal_id: proposalID,
