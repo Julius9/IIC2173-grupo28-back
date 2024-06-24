@@ -27,6 +27,11 @@ User.init({
     allowNull: false,
     defaultValue: 5000.00,
   },
+  admin: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
 }, {
   sequelize,
   modelName: 'User',
