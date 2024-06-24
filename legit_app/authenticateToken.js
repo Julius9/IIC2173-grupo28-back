@@ -1,5 +1,11 @@
 const jwt = require('jsonwebtoken');
 
+function getJWTscope(token) {
+  const secret = process.env.JWT_SECRET;
+  const payload = jwt.verify(token, secret);
+  return payload.scope;
+}
+
 const authenticateToken = (req, res, next) => {
   // Obtener el token del encabezado 'Authorization'
   const authHeader = req.headers['authorization'];
@@ -16,8 +22,27 @@ const authenticateToken = (req, res, next) => {
 
     req.user = user; // Guarda los datos del usuario en el objeto de solicitud
     console.log(req.user)
+    req.scope = getJWTscope(token);
     next(); // Continúa con el próximo middleware o controlador
   });
 };
 
-module.exports = authenticateToken;
+async function isUser(req, res, next) {
+  if (!req.scope.includes('user')) {
+    return res.status(403).send('No tienes permisos para realizar esta acción');
+  }
+  next();
+}
+
+async function isAdmin(req, res, next) {
+  if (!req.scope.includes('admin')) {
+    return res.status(403).send('No tienes permisos de administrador');
+  }
+  next();
+}
+
+module.exports = {
+  authenticateToken,
+  isUser,
+  isAdmin,
+};
