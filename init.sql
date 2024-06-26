@@ -17,6 +17,15 @@ CREATE TABLE flights (
     tickets_left INT DEFAULT 90
 );
 
+CREATE TABLE flights_reservados (
+    id SERIAL PRIMARY KEY,
+    flight_id INT,
+    num_boletos INT,
+    descuento FLOAT,
+    activado BOOLEAN,
+    FOREIGN KEY (flight_id) REFERENCES flights(id)
+);
+
 CREATE TABLE purchases (
     id SERIAL PRIMARY KEY,
     flight_id INT,
@@ -33,7 +42,7 @@ CREATE TABLE users (
     mail VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    money DECIMAL(10, 2) NOT NULL DEFAULT 5000.00
+    money DECIMAL(10, 2) NOT NULL DEFAULT 5000.00,
     admin BOOLEAN DEFAULT FALSE
 );
 
@@ -46,6 +55,8 @@ CREATE TABLE transaction (
     status VARCHAR(255) NOT NULL,
     flight_id INT NOT NULL,
     request_id VARCHAR(255) NULL,
+    is_reserve BOOLEAN DEFAULT FALSE,
+    is_admin BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (flight_id) REFERENCES flights(id)
 );

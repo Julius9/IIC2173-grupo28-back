@@ -157,17 +157,27 @@ async function formatearFechaVuelo(date) {
     return formattedTime;
 }
 
-async function createTransaction(flight_id, quantity, user_id) {
+async function createTransaction(flight_id, quantity, user_id, isReservation, isAdmin) {
     const flight = await findFlightById(flight_id);
     if (!flight) {
         throw new Error("Vuelo no encontrado");
     }
-    const amount = flight.price * Number(quantity);
-    
-    const query = 'INSERT INTO transaction (flight_id, user_id, quantity, amount, status) VALUES ($1, $2, $3, $4, $5) RETURNING *';
-    const values = [flight_id, user_id, quantity, amount, 'pending'];
+    let query;
+    let values;
+    let result;
+    let amount;
+    if (isReservation && !isAdmin) {
+        query = 'SELECT * FROM flights_reservados WHERE flight_id = $1';
+        values = [flight_id];
+        result = await dbClient.query(query, values);
+        amount = flight.price * Number(quantity) * (1 - result.rows[0].descuento);
+    } else {
+        amount = flight.price * Number(quantity);
+    }
+    query = 'INSERT INTO transaction (flight_id, user_id, quantity, amount, status, is_reserve, is_admin) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *';
+    values = [flight_id, user_id, quantity, amount, 'pending', isReservation, isAdmin];
     const newTrx = await dbClient.query(query, values);
-    const result = newTrx.rows[0];
+    result = newTrx.rows[0];
     return result;
 }
 
@@ -365,15 +375,15 @@ app.get('/flights/:id', async (req, res) => {
 
 app.post('/transaction/create', authenticateToken, async (req, res) => {
     try {
-        const { flight_id, quantity } = req.body;
+        const { flight_id, quantity, isReservation, isAdmin } = req.body;
         console.log(req.body);
         console.log("Se recibio una solicitud de transaccion");
         
         const user_id = req.user.id;
 
-        const request_id = await reservarFlight(flight_id, quantity);
+        const request_id = await reservarFlight(flight_id, quantity, isReservation, isAdmin);
 
-        const newTrx = await createTransaction(flight_id, quantity, user_id);
+        const newTrx = await createTransaction(flight_id, quantity, user_id, isReservation, isAdmin);
 
         await updateTransactionRequestID(newTrx.id, request_id);
     
@@ -382,7 +392,7 @@ app.post('/transaction/create', authenticateToken, async (req, res) => {
 
         console.log(newTrx);
         const transactionID = newTrx.id.toString();
-        const amount = quantity * Number(newTrx.amount);
+        const amount = newTrx.amount;
         // // USO: tx.create(transactionId, nombreComercio, monto, urlRetorno)
         // const createResponse = await (new WebpayPlus.Transaction()).create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:5173/compra-completada");
         // const trx = await tx.create(transactionID, "test-iic2173", amount, process.env?.REDIRECT_URL || "http://localhost:5173/compra-completada");
@@ -452,15 +462,24 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
         trx = await updateTransactionStatus('canceled', lastToken);
         
         flight = await findFlightById(lastFlightID);
-        const updatedTicketsLeft = flight.tickets_left + trx.quantity;
-        await updateFlightTickets(lastFlightID, updatedTicketsLeft);
+
+        if (trx.is_reserve && !trx.is_admin) {
+            const query = 'UPDATE flights_reservados SET num_boletos = num_boletos + $1 WHERE flight_id = $2'
+            const values = [lastFlightID];
+            await dbClient.query(query, values);
+        } else {
+            const updatedTicketsLeft = flight.tickets_left + trx.quantity;
+            await updateFlightTickets(lastFlightID, updatedTicketsLeft);
+        }
         console.log("Se recibio una solicitud de commit OSTRAS", lastFlightID, lastToken);
 
-      res.status(200).json({
-        message: "Transaccion anulada por el usuario"
-      });
-      await validateFlightRequest(trx.request_id, false, lastToken, req);
-      return;
+        res.status(200).json({
+            message: "Transaccion anulada por el usuario"
+        });
+        if (!trx.is_admin) {
+            await validateFlightRequest(trx.request_id, false, lastToken, req);
+        }
+        return;
     }
     console.log("Se recibio una solicitud de commit 2", ws_token);
 
@@ -501,19 +520,30 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
       trx = await updateTransactionStatus('rejected', ws_token);
         const flightID = trx.flight_id;
         flight = await findFlightById(flightID);
-        const updatedTicketsLeft = flight.tickets_left + trx.quantity;
-        await updateFlightTickets(flightID, updatedTicketsLeft);
+
+        if (trx.is_reserve && !trx.is_admin) {
+            const query = 'UPDATE flights_reservados SET num_boletos = num_boletos + $1 WHERE flight_id = $2'
+            const values = [trx.quantity, flightID];
+            await dbClient.query(query, values);
+        } else {
+            const updatedTicketsLeft = flight.tickets_left + trx.quantity;
+            await updateFlightTickets(flightID, updatedTicketsLeft);
+        }
       res.status(200).json( {
         message: "Transaccion ha sido rechazada",
         flight: trx.flight_id,
         quantity: trx.quantity
       });
-      await validateFlightRequest(trx.request_id, false, ws_token, req);
+      if (!trx.is_admin) {
+        await validateFlightRequest(trx.request_id, false, ws_token, req);
+      }
       return;
     }
     
     trx = await updateTransactionStatus('completed', ws_token);
-    await validateFlightRequest(trx.request_id, true, ws_token, req);
+    if (!trx.is_admin) {
+        await validateFlightRequest(trx.request_id, true, ws_token, req);
+    }
     console.log("Estoy aqui!!! 23")
     res.status(200).json ({
       message: "Transaccion ha sido aceptada",
@@ -524,14 +554,33 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
 });
 
 
-async function reservarFlight(flightID, ticketsToBook){
+async function reservarFlight(flightID, ticketsToBook, isReservation, isAdmin){
     try {
         // Buscar el vuelo actual en la base de datos
         const flight = await findFlightById(flightID);
 
         // Actualizar la cantidad de tickets disponibles
-        const updatedTicketsLeft = flight.tickets_left - ticketsToBook;
-        await updateFlightTickets(flightID, updatedTicketsLeft);
+        let updatedTicketsLeft;
+        if (isReservation && isAdmin) {
+            updatedTicketsLeft = flight.tickets_left - ticketsToBook;
+            await updateFlightTickets(flightID, updatedTicketsLeft);
+        } else if (isReservation && !isAdmin) {
+            // actualizar tickets en tabla flights_reservados
+            const query = 'UPDATE flights_reservados SET num_boletos = num_boletos - $1 WHERE flight_id = $2';
+            const values = [ticketsToBook, flightID];
+            await dbClient.query(query, values);
+        } else {
+            updatedTicketsLeft = flight.tickets_left - ticketsToBook;
+            await updateFlightTickets(flightID, updatedTicketsLeft);
+        }
+        
+        let seller;
+
+        if (isReservation && isAdmin) {
+            seller = 28;
+        } else {
+            seller = 0;
+        }
         
         const requestResponse = {
             "request_id": uuidv4().toString(),
@@ -542,7 +591,7 @@ async function reservarFlight(flightID, ticketsToBook){
             "datetime": new Date().toISOString(),
             "deposit_token": "",  // Asigna un token si es necesario
             "quantity": ticketsToBook,
-            "seller": 0
+            "seller": seller
         };
 
         const request_id = mqtt_request.publishRequest(requestResponse);
@@ -617,7 +666,9 @@ async function validateFlightRequest(request_id, valid, token, req) {
 
 app.post('/flights/:id/check', authenticateToken, async (req, res) => {
     const flightId = req.params.id;
-    const ticketsToBook = req.body.ticketsToBook;  // La cantidad de tickets a descontar
+    const ticketsToBook = req.body.ticketsToBook; // La cantidad de tickets a descontar
+    const isReservation = req.body.isReservation;
+    const isAdmin = req.body.isAdmin;
 
     try {
         // Buscar el vuelo actual en la base de datos
@@ -627,10 +678,23 @@ app.post('/flights/:id/check', authenticateToken, async (req, res) => {
         }
 
         // Verificar si hay suficientes tickets disponibles
-        if (flight.tickets_left < ticketsToBook) {
-            throw new Error("No hay suficientes tickets disponibles para reservar, seleccione una cantidad menor");
-        } else if (ticketsToBook <= 0) {
-            throw new Error("La cantidad de tickets a reservar debe ser mayor que cero");
+        if (isReservation && !isAdmin) {
+            const query = 'SELECT * FROM flights_reservados WHERE flight_id = $1';
+            const values = [flightId];
+            const result = await dbClient.query(query, values);
+            if (result.rows.length === 0) {
+                throw new Error("No hay tickets disponibles");
+            } else if (result.rows[0].num_boletos < ticketsToBook) {
+                throw new Error("No hay suficientes tickets disponibles, seleccione una cantidad menor");
+            } else if (ticketsToBook <= 0) {
+                throw new Error("La cantidad de tickets a reservar debe ser mayor que cero");
+            }
+        } else {
+            if (flight.tickets_left < ticketsToBook) {
+                throw new Error("No hay suficientes tickets disponibles para reservar, seleccione una cantidad menor");
+            } else if (ticketsToBook <= 0) {
+                throw new Error("La cantidad de tickets a reservar debe ser mayor que cero");
+            }
         }
         res.status(200).json({ valid: true, flight: flight, ticketsToBook: ticketsToBook });
     } catch (error) {
