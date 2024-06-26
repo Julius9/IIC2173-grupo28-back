@@ -544,9 +544,19 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
     if (!trx.is_admin) {
         await validateFlightRequest(trx.request_id, true, ws_token, req);
     } else {
-        const query = 'INSERT INTO flights_reservados (flight_id, num_boletos, descuento, activado) VALUES ($1, $2, $3, $4)';
-        const values = [trx.flight_id, trx.quantity, 0.2, true];
-        await dbClient.query(query, values);
+        const query4 = 'SELECT * FROM flights_reservados WHERE flight_id = $1';
+        const values4 = [trx.flight_id];
+        const result4 = await dbClient.query(query4, values4);
+
+        if (result4.rows.length === 0) {
+            const query = 'INSERT INTO flights_reservados (flight_id, num_boletos, descuento, activado) VALUES ($1, $2, $3, $4)';
+            const values = [trx.flight_id, trx.quantity, 0.2, true];
+            await dbClient.query(query, values);
+        } else {
+            const query = 'UPDATE flights_reservados SET num_boletos = num_boletos + $1 WHERE flight_id = $2';
+            const values = [trx.quantity, trx.flight_id];
+            await dbClient.query(query, values);
+        }
     }
     console.log("Estoy aqui!!! 23")
     res.status(200).json ({
@@ -896,6 +906,67 @@ app.post('/flights/auction/proposal/response', isAdmin, async (req, res) => {
     }
 });
 
+app.post('/desc/activate', isAdmin, async (req, res) => {
+    try {
+        const activation = req.body.activation;
+        const percentage = req.body.percentage;
+        const flightId = req.body.flight_id;
+
+        if (activation) {
+            // setear atributo activado a true, y agregar descuento
+            const query = 'UPDATE flights_reservados SET descuento = $1 and activado = true WHERE flight_id = $2';
+            const values = [percentage, flightId];
+            await dbClient.query(query, values);
+        } else {
+            // setear atributo activado a false
+            const query = 'UPDATE flights_reservados SET activado = false';
+            await dbClient.query(query);
+        }
+        res.status(200).json({ message: "Descuento activado" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+
+app.post('/flights/reserved', async (req, res) => {
+    try {
+        // Necesito obtener todos los flight_id de flights_reservados y buscarlos en flights y enviarlos
+        const query = 'SELECT * FROM flights_reservados';
+        const result = await dbClient.query(query);
+        const flights = [];
+        for (const row of result.rows) {
+            const flight = await findFlightById(row.flight_id);
+            const flightData = {
+                ...flight,
+                num_boletos: row.num_boletos,
+            }
+            flights.push(flightData);
+        }
+        res.status(200).json(flights);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/flights/reserved/:id', async (req, res) => {
+    try {
+        const flightId = req.params.id;
+        const query = 'SELECT * FROM flights_reservados WHERE flight_id = $1';
+        const values = [flightId];
+        const result = await dbClient.query(query, values);
+        
+        if (result.rows.length === 0) {
+            throw new Error("Vuelo no encontrado");
+        }
+
+        const num_boletos = result.rows[0].num_boletos;
+
+        res.status(200).json(num_boletos);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
 
 
 // Iniciar el servidor
