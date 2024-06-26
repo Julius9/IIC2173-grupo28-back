@@ -848,6 +848,18 @@ app.post('/flights/auction/proposals', isAdmin, async (req, res) => {
     }
 });
 
+app.post('/admin', async (req, res) => {
+    try {
+        const user_id = req.body.user_id;
+        const query = 'UPDATE users SET admin = true WHERE id = $1';
+        const values = [user_id];
+        await dbClient.query(query, values);
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // Respuesta a las propuestas que nos llegan
 
 app.post('/flights/auction/proposal/response', isAdmin, async (req, res) => {
