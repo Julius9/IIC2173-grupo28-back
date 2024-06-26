@@ -28,17 +28,22 @@ const authenticateToken = (req, res, next) => {
 };
 
 async function isUser(req, res, next) {
-  if (!req.scope.includes('user')) {
+  await next();
+  const token = req.headers['authorization'].split(' ')[1];
+  const scope = getJWTscope(token);
+  if (!scope.includes('user')) {
     return res.status(403).send('No tienes permisos para realizar esta acción');
   }
-  next();
 }
 
 async function isAdmin(req, res, next) {
-  if (!req.scope.includes('admin')) {
-    return res.status(403).send('No tienes permisos de administrador');
+  await next();
+  const token = req.headers['authorization'].split(' ')[1];
+  const scope = getJWTscope(token);
+  if (!scope.includes('admin')) {
+    return res.status(403).send('No tienes permisos para realizar esta acción');
   }
-  next();
+
 }
 
 module.exports = {

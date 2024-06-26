@@ -828,7 +828,7 @@ app.post('/flights/propose', isAdmin, async (req, res) => {
         await dbClient.query(query2, values2);
 
         mqtt_auctions.publishAuction(proposal);
-
+        res.status(200).json({ message: "Propuesta enviada" });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -840,7 +840,7 @@ app.post('/flights/auction/proposals', isAdmin, async (req, res) => {
     try {
         const query = 'SELECT * FROM external_proposal';
         const result = await dbClient.query(query);
-        res.json(result.rows);
+        res.status(200).json(result.rows);
 
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -850,11 +850,12 @@ app.post('/flights/auction/proposals', isAdmin, async (req, res) => {
 
 app.post('/admin', async (req, res) => {
     try {
+        console.log("Se recibio una solicitud de admin");
         const user_id = req.body.user_id;
         const query = 'UPDATE users SET admin = true WHERE id = $1';
         const values = [user_id];
         await dbClient.query(query, values);
-
+        res.status(200).json({ message: "Usuario promovido a administrador" });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -895,12 +896,6 @@ app.post('/flights/auction/proposal/response', isAdmin, async (req, res) => {
     }
 });
 
-
-app.post('/auctions/external', isAdmin, async (req, res) => {
-    const query = 'SELECT * FROM external_auction';
-    const result = await dbClient.query(query);
-    res.json(result.rows);
-});
 
 
 // Iniciar el servidor
