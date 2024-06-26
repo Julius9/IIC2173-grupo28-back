@@ -543,6 +543,10 @@ app.post('/transaction/commit', authenticateToken, async (req, res) => {
     trx = await updateTransactionStatus('completed', ws_token);
     if (!trx.is_admin) {
         await validateFlightRequest(trx.request_id, true, ws_token, req);
+    } else {
+        const query = 'INSERT INTO flights_reservados (flight_id, num_boletos, descuento, activado) VALUES ($1, $2, $3, $4)';
+        const values = [trx.flight_id, trx.quantity, 0.2, true];
+        await dbClient.query(query, values);
     }
     console.log("Estoy aqui!!! 23")
     res.status(200).json ({
