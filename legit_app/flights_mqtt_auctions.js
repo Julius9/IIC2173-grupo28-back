@@ -73,10 +73,39 @@ client.on('message', (topic, message) => {
                 if (msg.type === 'acceptance') {
                     // hago update de los tickets al vuelo de la tabla flights
                     try {
-                        query = 'UPDATE flights SET tickets_left = tickets_left - $1 WHERE departure_airport = $2 AND arrival_airport = $3 AND departure_time = $4 AND airline = $5';
-                        values = [msg.quantity, msg.departure_airport, msg.arrival_airport, msg.departure_time, msg.airline];
-                        
-                        dbClient.query(query, values);
+                        const queryFlights = 'SELECT * FROM flights WHERE departure_airport = $1 AND arrival_airport = $2 AND departure_time = $3 AND airline = $4';
+                        const valuesFlights = [msg.departure_airport, msg.arrival_airport, msg.departure_time, msg.airline];
+                        const resultFlights = dbClient.query(queryFlights, valuesFlights);
+                        if (resultFlights.rows.length === 0) {
+                            console.log('Flight not found:', msg.departure_airport, msg.arrival_airport, msg.departure_time, msg.airline);
+                            return;
+                        } else {
+                            // buscar si existe el vuelo en la tabla flights_reservados
+                            query = 'SELECT * FROM flights WHERE departure_airport = $1 AND arrival_airport = $2 AND departure_time = $3 AND airline = $4';
+                            values = [msg.departure_airport, msg.arrival_airport, msg.departure_time, msg.airline];
+                            result = dbClient.query(query, values);
+
+                            if (result.rows.length === 0) {
+                                throw new Error('Flight not found:', msg.departure_airport, msg.arrival_airport, msg.departure_time, msg.airline);
+                            } else {
+                                const flightID = result.rows[0].id;
+                                // ver si existe en la tabla flights_reservados
+                                query = 'SELECT * FROM flights_reservados WHERE flight_id = $1';
+                                values = [flightID];
+                                result = dbClient.query(query, values);
+                                if (result.rows.length === 0) {
+                                    // si no existe, lo agrego
+                                    query = 'INSERT INTO flights_reservados (flight_id, num_boletos, descuento, activado) VALUES ($1, $2, $3, $4)';
+                                    values = [flightID, msg.quantity, 0.2, true];
+                                    dbClient.query(query, values);
+                                } else {
+                                    // si existe, actualizo la cantidad de tickets
+                                    query = 'UPDATE flights_reservados SET num_boletos = num_boletos + $1 WHERE flight_id = $2';
+                                    values = [msg.quantity, flightID];
+                                    dbClient.query(query, values);
+                                }
+                            }
+                        }
 
                         // hago update del estado de la propuesta en la tabla internal_proposal
                         query = 'UPDATE internal_proposal SET expired = $1 WHERE proposal_id = $2';

@@ -10,7 +10,7 @@ const mqtt_auctions = require('./flights_mqtt_auctions');
 
 const { v4: uuidv4 } = require('uuid');
 const { IPinfoWrapper } = require("node-ipinfo");
-const authenticateToken = require('./authenticateToken');
+const { authenticateToken, isUser, isAdmin} = require('./authenticateToken');
 // const tx = require('./utils/trx');
 const axios = require('axios');
 const transporter = require('./mailer'); // Importa el módulo de correo
@@ -731,7 +731,7 @@ app.get('/compras', authenticateToken, async (req, res) => {
 
 });
 
-app.post('/flights/:id/auction', async (req, res) => {
+app.post('/flights/:id/auction', isAdmin, async (req, res) => {
     const flightId = req.params.id;
     const ticketsToPropose = req.body.ticketsToBook;  // La cantidad de tickets a descontar
     console.log("Se recibio una solicitud de subasta");
@@ -742,17 +742,22 @@ app.post('/flights/:id/auction', async (req, res) => {
         if (!flight) {
             throw new Error("Vuelo no encontrado");
         }
+        const query3 = 'SELECT * FROM flights_reservados WHERE flight_id = $1';
+        const values3 = [flightId];
+        const result3 = await dbClient.query(query3, values3);
 
-        // Verificar si hay suficientes tickets disponibles
-        if (flight.tickets_left < ticketsToPropose) {
-            throw new Error("No hay suficientes tickets disponibles para reservar, seleccione una cantidad menor");
-        } else if (ticketsToPropose <= 0) {
-            throw new Error("La cantidad de tickets a reservar debe ser mayor que cero");
+        if (result3.rows.length === 0) {
+            throw new Error("No hay tickets disponibles");
+        } else if (result3.rows[0].num_boletos < ticketsToPropose) {
+            throw new Error("No hay suficientes tickets disponibles, seleccione una cantidad menor");
         }
 
         const query = 'INSERT INTO internal_auction (auction_id, proposal_id, departure_airport, arrival_airport, departure_time, airline, quantity, group_id, type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *';
         const values = [uuidv4().toString(), "", flight.departure_airport_id, flight.arrival_airport_id, flight.departure_airport_time, flight.airline, ticketsToPropose, "28", "offer"]
         const result = await dbClient.query(query, values);
+        
+
+
         
         const auctionResponse = {
             auction_id: result.rows[0].auction_id,
@@ -770,8 +775,9 @@ app.post('/flights/:id/auction', async (req, res) => {
         
         // restar tickets
 
-        const updatedTicketsLeft = flight.tickets_left - ticketsToPropose;
-        await updateFlightTickets(flightId, updatedTicketsLeft);
+        const query2 = 'UPDATE flights_reservados SET num_boletos = num_boletos - $1 WHERE flight_id = $2';
+        const values2 = [ticketsToPropose, flightId];
+        await dbClient.query(query2, values2);
 
         res.status(200).json({ valid: true, flight: flight, ticketsToBook: ticketsToPropose });
     } catch (error) {
@@ -781,7 +787,7 @@ app.post('/flights/:id/auction', async (req, res) => {
 
 
 // OFERTAS DE LOS OTROS GRUPOS, DEBERIA HABER UN BOTON QUE DEJE PROPONER
-app.post('/flights/auction/offers', async (req, res) => {
+app.post('/flights/auction/offers', isAdmin, async (req, res) => {
     try {
         const query = 'SELECT * FROM external_auction';
         const result = await dbClient.query(query);
@@ -793,7 +799,7 @@ app.post('/flights/auction/offers', async (req, res) => {
 });
 
 // Este es un boton para hacer el proposal a una oferta de otro grupo
-app.post('/flights/propose', async (req, res) => {
+app.post('/flights/propose', isAdmin, async (req, res) => {
     try {
         const proposalID = uuidv4().toString();
         const auctionID = req.body.auction_id;
@@ -830,7 +836,7 @@ app.post('/flights/propose', async (req, res) => {
 
 // PROPUESTAS QUE NOS LLEGAN POR LAS OFERTAS HECHAS
 
-app.post('/flights/auction/proposals', async (req, res) => {
+app.post('/flights/auction/proposals', isAdmin, async (req, res) => {
     try {
         const query = 'SELECT * FROM external_proposal';
         const result = await dbClient.query(query);
@@ -844,7 +850,7 @@ app.post('/flights/auction/proposals', async (req, res) => {
 
 // Respuesta a las propuestas que nos llegan
 
-app.post('/flights/auction/proposal/response', async (req, res) => {
+app.post('/flights/auction/proposal/response', isAdmin, async (req, res) => {
     try {
         const proposalId = req.body.proposal_id;
         const proposalResponse = req.body.response; // bool true = aceptar, false = rechazar
@@ -878,7 +884,7 @@ app.post('/flights/auction/proposal/response', async (req, res) => {
 });
 
 
-app.post('/auctions/external', authenticateToken, async (req, res) => {
+app.post('/auctions/external', isAdmin, async (req, res) => {
     const query = 'SELECT * FROM external_auction';
     const result = await dbClient.query(query);
     res.json(result.rows);
