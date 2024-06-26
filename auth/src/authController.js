@@ -45,7 +45,14 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "Authentication failed. Wrong password." });
     }
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    let scopeSample;
+    if (user.admin) {
+      scopeSample = ['admin', 'user'];
+    } else {
+      scopeSample = ['user'];
+    }
+    
+    const token = jwt.sign({ id: user.id, scope: scopeSample}, process.env.JWT_SECRET, {
       expiresIn: '1h' // Expira en una hora, puedes cambiarlo según tus necesidades
     });
 
